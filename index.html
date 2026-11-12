@@ -1,0 +1,1869 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>GEO 结构图</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&family=Noto+Serif+SC:wght@600&display=swap">
+<style>
+/* Layout: one-screen app. Top bar, pannable SVG canvas, drawer on the right, floating cards along the bottom. */
+:root{
+  --bg:#F6F7F8; --surface:#FFFFFF; --surface-2:#ECEEF2; --fg:#16181D; --fg-2:#454B55; --muted:#6E747E;
+  --line:#DDE0E5; --line-strong:#B4BAC4; --accent:#2F4A8A; --accent-soft:rgba(47,74,138,.09); --on-accent:#FFFFFF;
+  --danger:#B4483C; --danger-soft:rgba(180,72,60,.10);
+  --shadow:0 1px 2px rgba(20,24,33,.05),0 12px 32px rgba(20,24,33,.09);
+  --font-sans:"IBM Plex Sans","Noto Sans SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --font-display:"Noto Serif SC","Songti SC","STSong",serif; --grid:#D2D6DD;
+  --ease:cubic-bezier(.22,.8,.24,1);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1115; --surface:#171A20; --surface-2:#21252D; --fg:#E8EAED; --fg-2:#B7BCC5; --muted:#8B919B;
+    --line:#2A2F38; --line-strong:#4A515D; --accent:#86A2E6; --accent-soft:rgba(134,162,230,.13); --on-accent:#0F1115;
+    --danger:#E08070; --danger-soft:rgba(224,128,112,.14); --grid:#252A33;
+    --shadow:0 1px 2px rgba(0,0,0,.35),0 14px 36px rgba(0,0,0,.45);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1115; --surface:#171A20; --surface-2:#21252D; --fg:#E8EAED; --fg-2:#B7BCC5; --muted:#8B919B;
+  --line:#2A2F38; --line-strong:#4A515D; --accent:#86A2E6; --accent-soft:rgba(134,162,230,.13); --on-accent:#0F1115;
+  --danger:#E08070; --danger-soft:rgba(224,128,112,.14); --grid:#252A33;
+  --shadow:0 1px 2px rgba(0,0,0,.35),0 14px 36px rgba(0,0,0,.45);
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-sans);font-size:14px;line-height:1.5;display:flex;flex-direction:column;overflow:hidden;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+h1,h2,h3,p{margin:0}
+h1,h2{text-wrap:balance}
+
+/* top bar */
+.topbar{display:flex;align-items:center;flex-wrap:wrap;gap:10px 16px;padding-block:12px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));border-bottom:1px solid var(--line);background:var(--bg);position:relative;z-index:20}
+.brand{display:flex;align-items:baseline;gap:12px;margin-right:auto;min-width:0}
+.brand h1{font-size:16px;font-weight:600;letter-spacing:.01em;white-space:nowrap}
+.brand p{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.seg{position:relative;display:inline-flex;padding:3px;border-radius:9px;background:var(--surface-2)}
+.seg button{position:relative;z-index:1;border:0;background:none;padding:5px 14px;border-radius:7px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;transition:color .3s var(--ease)}
+.seg button[aria-pressed="true"]{color:var(--fg)}
+.seg button:disabled{cursor:default;opacity:.45}
+.seg .thumb{position:absolute;top:3px;bottom:3px;left:0;border-radius:7px;background:var(--surface);box-shadow:0 1px 2px rgba(20,24,33,.08),0 0 0 1px var(--line);transition:transform .45s var(--ease),width .45s var(--ease)}
+.seg-label{font-size:11.5px;color:var(--muted);letter-spacing:.06em;margin-right:-8px}
+.search{position:relative;width:220px}
+.search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:14px;height:14px;stroke:var(--muted);fill:none;stroke-width:1.6;pointer-events:none}
+.search input{width:100%;box-sizing:border-box;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:9px;padding:7px 10px 7px 30px;font:inherit;font-size:13px;outline:none;transition:border-color .2s,box-shadow .2s}
+.search input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.results{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:4px;z-index:40;max-height:320px;overflow:auto}
+.results button{display:flex;justify-content:space-between;gap:10px;width:100%;text-align:left;border:0;background:none;padding:7px 9px;border-radius:7px;cursor:pointer;font-size:13px}
+.results button span:last-child{color:var(--muted);font-size:11.5px;white-space:nowrap}
+.results button.on,.results button:hover{background:var(--accent-soft)}
+.results .empty{padding:8px 9px;color:var(--muted);font-size:12.5px}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:6px 13px;font-size:13px;font-weight:500;cursor:pointer;transition:background .2s,border-color .2s,color .2s,transform .2s var(--ease)}
+.btn:hover{border-color:var(--line-strong)}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn-primary:hover{border-color:var(--accent);filter:brightness(1.08)}
+.btn[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.btn:focus-visible,.seg button:focus-visible,.icon-btn:focus-visible,.chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.icon-btn{display:inline-grid;place-items:center;width:30px;height:30px;border:0;border-radius:8px;background:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;transition:background .2s,color .2s}
+.icon-btn:hover{background:var(--surface-2);color:var(--fg)}
+
+/* stage */
+.stage{position:relative;flex:1;min-height:0;overflow:hidden}
+#map{display:block;width:100%;height:100%;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;background-image:radial-gradient(circle,var(--grid) 1px,transparent 1.6px);background-size:28px 28px}
+#map.panning{cursor:grabbing}
+.hit{fill:transparent}
+.edge{fill:none;stroke:var(--line-strong);stroke-width:1.1;opacity:0;transition:opacity .5s var(--ease),stroke .3s,stroke-width .3s}
+.edge.vis{opacity:.9}
+.edge.t-tree.vis{opacity:.75}
+.edge.dash{stroke-dasharray:3 4}
+.edge.arrow{marker-end:url(#arr)}
+.edge.t-flow{stroke:var(--fg-2);stroke-width:1.4}
+.edge.lit{opacity:1;stroke:var(--accent);stroke-width:1.6;stroke-dasharray:7 5;animation:march 1.1s linear infinite}
+.edge.lit.dash{stroke-dasharray:3 4;animation-name:march2}
+@keyframes march{to{stroke-dashoffset:-24}}
+@keyframes march2{to{stroke-dashoffset:-14}}
+.edge.arrow.lit{marker-end:url(#arrLit)}
+#map.dimming .edge.vis:not(.lit){opacity:.1}
+.edge.off-edge{stroke:var(--danger);opacity:1;stroke-dasharray:3 4}
+.edge.tour-hidden{opacity:0 !important}
+.arr-path{fill:none;stroke:var(--line-strong);stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+.arr-path.lit{stroke:var(--accent)}
+
+.node{cursor:pointer;outline:none;transition:opacity .5s var(--ease)}
+.inner{transform-box:fill-box;transform-origin:center}
+.node .lbl{font-family:var(--font-sans);font-size:13px;font-weight:500;fill:var(--fg);paint-order:stroke;stroke:var(--bg);stroke-width:5px;stroke-linejoin:round;transition:fill .25s,opacity .3s}
+.node .num{font-family:var(--font-mono);font-size:10.5px;fill:var(--muted);letter-spacing:.04em}
+.g-fill{fill:var(--fg-2);transition:fill .25s}
+.g-ring{fill:var(--bg);stroke:var(--fg-2);stroke-width:1.3;transition:stroke .25s}
+.gate-bg{fill:var(--surface);stroke:var(--accent);stroke-width:1.3;transition:stroke .25s}
+.gate-mark{fill:none;stroke:var(--accent);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;transition:stroke .25s}
+.k-gate .lbl{fill:var(--accent);font-weight:600}
+.node .sub{font-family:var(--font-sans);font-size:11.5px;fill:var(--muted);paint-order:stroke;stroke:var(--bg);stroke-width:4px;stroke-linejoin:round;transition:opacity .3s}
+.st-disc{fill:var(--surface);stroke:var(--fg-2);stroke-width:1.3;transition:fill .3s,stroke .3s}
+.st-num{font-family:var(--font-sans);font-size:10.5px;font-weight:600;fill:var(--fg-2);transition:fill .3s}
+.node.lit .st-disc{stroke:var(--accent)}
+.node.lit .st-num{fill:var(--accent)}
+.node.focus .st-disc{fill:var(--accent)}
+.node.focus .st-num{fill:var(--on-accent)}
+#map.v-causal .node .lbl{stroke:var(--surface)}
+.zone{fill:var(--surface);stroke:var(--line);stroke-width:1;opacity:0;transition:opacity .6s var(--ease);pointer-events:none}
+.zone.vis{opacity:.74}
+.zone.z-eng{stroke:var(--line-strong)}
+.pill{fill:var(--surface);stroke:var(--line-strong);stroke-width:1;transition:opacity .45s var(--ease),stroke .25s}
+.k-hub .lbl{font-weight:600;stroke:none}
+.as-caption .pill{opacity:0}
+.as-caption .lbl{font-size:11.5px;fill:var(--muted);letter-spacing:.1em;stroke:var(--bg);stroke-width:5px}
+.c-disc{fill:var(--surface);stroke:var(--accent);stroke-width:1.2}
+.c-orbit{fill:none;stroke:var(--line-strong);stroke-dasharray:1.5 6;transform-box:fill-box;transform-origin:center;animation:spin 90s linear infinite}
+.c-title{font-family:var(--font-sans);font-size:25px;font-weight:600;fill:var(--accent);letter-spacing:.08em}
+.c-sub{font-family:var(--font-sans);font-size:10.5px;font-weight:500;fill:var(--muted);letter-spacing:.12em;transition:opacity .3s}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.node.lit .lbl{fill:var(--accent)}
+.node.lit .g-fill{fill:var(--accent)}
+.node.lit .g-ring{stroke:var(--accent)}
+.node.lit .pill{stroke:var(--accent)}
+.node.focus .lbl{font-weight:600}
+.node.focus .g-ring,.node.focus .g-fill{stroke-width:1.8}
+#map.dimming .node:not(.lit){opacity:.16}
+.node.filtered{opacity:.16}
+.node.is-off{opacity:0 !important;pointer-events:none}
+.node.tour-hidden{opacity:0 !important;pointer-events:none}
+.node.tour-past{opacity:.46}
+.node.tour-next{opacity:.3}
+.edge.tour-dim{opacity:.25 !important}
+.node.pre{opacity:0 !important}
+.node:focus-visible .hit{stroke:var(--accent);stroke-width:1.2;stroke-dasharray:3 3}
+#map.moving .lbl,#map.moving .sub,#map.moving .c-sub{opacity:0}
+.node.off .gate-bg,.node.off .gate-mark{stroke:var(--danger)}
+.node.off .lbl{fill:var(--danger)}
+.node.weak .lbl{fill:var(--danger)}
+.node.weak .g-ring{stroke:var(--danger)}
+.node.weak .g-fill{fill:var(--danger)}
+.node.wobble .inner{animation:wobble .7s var(--ease)}
+@keyframes wobble{0%,100%{transform:none}20%{transform:rotate(-7deg)}45%{transform:rotate(6deg)}70%{transform:rotate(-3deg)}}
+
+.pulse{fill:none;stroke:var(--accent);stroke-width:1.6;transform-box:fill-box;transform-origin:center;animation:pulse .95s var(--ease) forwards;pointer-events:none}
+.pulse.bad{stroke:var(--danger)}
+@keyframes pulse{from{opacity:.9;transform:scale(.4)}to{opacity:0;transform:scale(2.6)}}
+#particle{opacity:0;transition:opacity .3s;pointer-events:none}
+#particle.on{opacity:1}
+.p-core{fill:var(--accent);opacity:0;transition:fill .25s,opacity .2s}
+.p-ring{fill:none;stroke:var(--accent);stroke-width:1.5;transition:stroke .25s,opacity .25s}
+.p-halo{fill:var(--accent);opacity:.13;transition:fill .25s}
+#particle.moving .p-core{opacity:1}
+#particle.moving .p-ring{opacity:0}
+#particle.fail .p-core,#particle.fail .p-halo{fill:var(--danger)}
+#particle.fail .p-ring{stroke:var(--danger)}
+
+#map.intro .node .inner{animation:nodeIn .75s var(--ease) both;animation-delay:var(--d,0ms)}
+#map.intro .edge{animation:edgeIn .9s var(--ease) .35s both}
+@keyframes nodeIn{from{opacity:0;transform:scale(.8)}}
+@keyframes edgeIn{from{opacity:0}}
+
+/* floating ui */
+.card{position:absolute;z-index:12;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+.card.enter{animation:cardIn .55s var(--ease)}
+@keyframes cardIn{from{opacity:0;transform:translate(-50%,14px)}to{opacity:1;transform:translate(-50%,0)}}
+.bottom-card{left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));width:min(620px,calc(100% - 32px));box-sizing:border-box}
+/* primer: the one-sentence concept, shown over the blurred map */
+.primer{position:absolute;inset:0;z-index:16;overflow:auto;display:flex;box-sizing:border-box;padding-block:28px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));background:var(--bg);background:color-mix(in srgb,var(--bg) 80%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.primer-inner{margin:auto;width:min(940px,100%);display:flex;flex-direction:column;gap:26px}
+.primer.enter .primer-inner>*{animation:fadeUp .8s var(--ease) both}
+.primer.enter .primer-inner>:nth-child(2){animation-delay:.12s}
+.primer.enter .primer-inner>:nth-child(3){animation-delay:.24s}
+.primer.enter .primer-inner>:nth-child(4){animation-delay:.36s}
+.primer-head{display:flex;flex-direction:column;gap:14px}
+.primer-h{font-family:var(--font-display);font-size:clamp(28px,4.4vw,48px);line-height:1.22;font-weight:600}
+.primer-lead{font-size:15px;line-height:1.8;color:var(--fg-2);max-width:62ch}
+.vs{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+.vs-card{margin:0;display:flex;flex-direction:column;gap:12px;min-width:0}
+.vs-tag{font-size:12.5px;font-weight:600;color:var(--muted)}
+.vs-card.now .vs-tag{color:var(--accent)}
+.mock{flex:1;display:flex;flex-direction:column;gap:11px;min-height:168px;box-sizing:border-box;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.vs-card.now .mock{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+.mock-bar{display:flex;align-items:center;gap:8px;padding:7px 12px;border:1px solid var(--line);border-radius:999px;font-size:12.5px;color:var(--fg-2)}
+.mock-bar svg{width:12px;height:12px;stroke:var(--muted);fill:none;stroke-width:1.6}
+.mock-link{display:flex;flex-direction:column;gap:5px}
+.mock-link i{display:block;height:6px;border-radius:3px;background:var(--line)}
+.mock-link i:first-child{height:7px;background:var(--accent);opacity:.38}
+.mock-more{font-size:11.5px;color:var(--muted)}
+.mock-q{align-self:flex-end;max-width:90%;padding:7px 12px;border-radius:13px 13px 4px 13px;background:var(--accent);color:var(--on-accent);font-size:12.5px;line-height:1.45}
+.mock-a{font-size:12.5px;line-height:1.6;color:var(--fg-2)}
+.mock-a ol{margin:4px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:2px}
+.mock-a li.you{color:var(--accent);font-weight:600}
+.vs-card p{font-size:13.5px;line-height:1.7;color:var(--fg-2)}
+.vs-card p b{color:var(--fg);font-weight:600}
+.primer-facts{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.primer-facts li{padding-top:12px;border-top:1px solid var(--line-strong);font-size:13px;line-height:1.65;color:var(--fg-2)}
+.primer-facts b{display:block;margin-bottom:2px;font-size:14px;font-weight:600;color:var(--fg)}
+.primer-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px}
+.primer-actions span{font-size:12.5px;color:var(--muted)}
+.btn-lg{padding:10px 20px;border-radius:11px;font-size:14.5px}
+
+/* guide: the tour panel, carrying the worked example */
+.guide{position:absolute;z-index:14;top:12px;bottom:12px;right:max(12px,env(safe-area-inset-right,0px));width:min(456px,calc(100% - 24px));box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+.guide.enter{animation:guideIn .6s var(--ease)}
+@keyframes guideIn{from{opacity:0;transform:translateX(28px)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}}
+.g-head{display:flex;align-items:flex-end;gap:8px;padding:14px 10px 12px 20px;border-bottom:1px solid var(--line)}
+.g-parts{display:flex;gap:16px;flex:1;min-width:0}
+.gp{display:flex;flex-direction:column;gap:5px}
+.gp>span{font-size:11.5px;font-weight:600;color:var(--muted);transition:color .3s}
+.gp.on>span{color:var(--accent)}
+.gp-bars{display:flex;gap:3px}
+.gp-bars button{width:17px;height:14px;box-sizing:border-box;padding:5px 0;border:0;border-radius:3px;background:var(--line);background-clip:content-box;cursor:pointer;transition:background-color .35s var(--ease),width .45s var(--ease)}
+.gp-bars button.done{background-color:var(--line-strong)}
+.gp-bars button.now{background-color:var(--accent);width:28px}
+.g-scroll{flex:1;min-height:0;overflow:auto;padding:20px 20px 22px}
+.g-content{animation:fadeUp .5s var(--ease)}
+.g-eyebrow{margin-bottom:6px;font-size:12px;font-weight:600;color:var(--accent)}
+.g-title{font-family:var(--font-display);font-size:23px;font-weight:600;line-height:1.3;margin-bottom:8px}
+.g-body{font-size:14px;line-height:1.75;color:var(--fg-2)}
+.g-foot{display:flex;align-items:center;gap:8px;padding:12px 14px 12px 20px;border-top:1px solid var(--line)}
+.g-foot .sp{flex:1}
+.tc-step{font-size:12px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.kbd-hint{font-size:11.5px;color:var(--muted)}
+.cx{margin-top:16px;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+.cx-label{display:flex;justify-content:space-between;gap:10px;margin-bottom:10px;font-size:12px;font-weight:600;color:var(--fg-2)}
+.cx-label span{font-weight:400;color:var(--muted)}
+.cx-chat{display:flex;flex-direction:column;gap:8px}
+.bubble{align-self:flex-end;max-width:92%;min-height:42px;box-sizing:border-box;padding:10px 14px;border-radius:15px 15px 4px 15px;background:var(--accent);color:var(--on-accent);font-size:14px;line-height:1.5}
+.bubble .caret{background:var(--on-accent)}
+.cx-zh{font-size:12.5px;line-height:1.6;color:var(--muted)}
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 14px;margin:0;font-size:13.5px}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0;font-weight:500}
+.rows{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.rows li{display:flex;align-items:baseline;gap:10px;padding:8px 11px;border:1px solid var(--line);border-radius:9px;background:var(--surface);font-size:13px;line-height:1.5;animation:fadeUp .45s var(--ease) both;animation-delay:calc(var(--i,0) * 80ms + 150ms)}
+.rows li.pick{border-color:var(--accent)}
+.rows li.dim{color:var(--muted)}
+.rows li.dim .src{color:var(--muted)}
+.rows .src{flex:0 0 98px;font-size:12px;font-weight:600;color:var(--accent)}
+.rows li>div{min-width:0}
+.rows small{display:block;font-size:11.5px;color:var(--muted)}
+.rows.queries li{align-items:center;font-size:12.5px}
+.rows.queries svg{flex-shrink:0;width:12px;height:12px;stroke:var(--muted);fill:none;stroke-width:1.6}
+.pool{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:12px;font-size:12.5px;color:var(--fg-2)}
+.pool b{padding:3px 10px;border:1px solid var(--line-strong);border-radius:999px;background:var(--surface);font-weight:500}
+.pool b.you{border-color:var(--accent);color:var(--accent);font-weight:600}
+.cx-scroll{overflow-x:auto}
+.cx-t{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
+.cx-t th{padding:4px 6px 6px;border-bottom:1px solid var(--line-strong);text-align:left;font-size:11.5px;font-weight:600;color:var(--muted);white-space:nowrap}
+.cx-t td{padding:7px 6px;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:top}
+.cx-t.wrap td{white-space:normal;line-height:1.55}
+.cx-t.wrap td:first-child{white-space:nowrap;font-weight:600;color:var(--accent)}
+.cx-t.wrap td:nth-child(2){white-space:nowrap}
+.cx-t tr:last-child td{border-bottom:0}
+.cx-t tbody tr{animation:fadeUp .45s var(--ease) both;animation-delay:calc(var(--i,0) * 70ms + 150ms)}
+.cx-t tr.you td{color:var(--accent);font-weight:600}
+.cx-t tr.out td{color:var(--muted)}
+.cx-t small{color:var(--muted);font-weight:400}
+.cx-t .miss,.cx-t .no{color:var(--danger)}
+.cx-t .yes{color:var(--accent);font-weight:600}
+.callout{margin-top:12px;padding:11px 13px;border-radius:10px;background:var(--accent-soft);font-size:13px;line-height:1.7;color:var(--fg-2)}
+.callout b{display:block;margin-bottom:2px;font-size:12.5px;font-weight:600;color:var(--accent)}
+.cx-note{margin-top:10px;font-size:11.5px;line-height:1.6;color:var(--muted)}
+.cx .answer{min-height:0;border:0;padding:0;background:none}
+.meter{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:9px 12px;margin-bottom:12px;font-size:13px;font-variant-numeric:tabular-nums}
+.meter i{display:block;height:6px;border-radius:3px;background:var(--line)}
+.meter i b{display:block;height:100%;border-radius:3px;background:var(--accent);transform-origin:left;animation:grow .9s var(--ease) .2s both}
+@keyframes grow{from{transform:scaleX(0)}}
+.meter span{color:var(--muted)}
+.meter strong{font-weight:600}
+.next-list{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:13.5px;line-height:1.65;color:var(--fg-2)}
+
+.sim{width:min(860px,calc(100% - 32px));padding:16px 20px 18px;max-height:min(62%,520px);overflow:auto}
+.sim-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px}
+.sim-head h2{font-size:15px;font-weight:600}
+.sim-head p{font-size:12.5px;color:var(--muted);margin-top:2px}
+.sim-head .icon-btn{margin-left:auto}
+.sim-body{display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr);gap:18px}
+.sim-controls{display:flex;flex-direction:column;gap:6px}
+.sw{display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:10px;cursor:pointer;transition:background .2s}
+.sw:hover{background:var(--surface-2)}
+.sw input{position:absolute;opacity:0;width:1px;height:1px}
+.track{position:relative;flex-shrink:0;width:34px;height:20px;border-radius:10px;background:var(--line-strong);transition:background .3s var(--ease)}
+.track::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.2);transition:transform .35s var(--ease)}
+.sw input:checked + .track{background:var(--accent)}
+.sw input:checked + .track::after{transform:translateX(14px)}
+.sw input:focus-visible + .track{outline:2px solid var(--accent);outline-offset:2px}
+.sw-text{display:flex;flex-direction:column;min-width:0}
+.sw-text b{font-size:13.5px;font-weight:600}
+.sw-text small{font-size:11.5px;color:var(--muted)}
+.sw input:not(:checked) ~ .sw-text b{color:var(--danger)}
+.sim-play{margin-top:8px;align-self:flex-start}
+.answer{border:1px solid var(--line);border-radius:12px;padding:12px 16px;background:var(--bg);min-width:0;min-height:236px;box-sizing:border-box}
+.ans-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.ans-app{font-size:11.5px;font-weight:600;letter-spacing:.06em;color:var(--muted)}
+.ans-status{margin-left:auto;font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:999px;background:var(--surface-2);color:var(--muted);white-space:nowrap}
+.ans-status.ok{background:var(--accent-soft);color:var(--accent)}
+.ans-status.bad{background:var(--danger-soft);color:var(--danger)}
+.ans-q{font-size:13px;font-weight:500;padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid var(--line)}
+.ans-list{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:7px;font-size:13px;color:var(--fg-2)}
+.ans-list li b{color:var(--fg);font-weight:600}
+.ans-list li.you b{color:var(--accent)}
+.ans-list li.you{animation:fadeUp .5s var(--ease)}
+.ans-src{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
+.ans-note{margin-top:10px;font-size:12.5px;color:var(--fg-2);line-height:1.65}
+.ans-note.bad{color:var(--danger)}
+.ans-idle{font-size:13px;color:var(--muted)}
+.ans-foot{margin-top:10px;font-size:11px;color:var(--muted)}
+
+.drawer{position:absolute;z-index:14;top:12px;bottom:12px;right:max(12px,env(safe-area-inset-right,0px));width:min(380px,calc(100% - 24px));box-sizing:border-box;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:auto;transform:translateX(calc(100% + 32px));visibility:hidden;transition:transform .5s var(--ease),visibility 0s linear .5s}
+.drawer.open{transform:none;visibility:visible;transition:transform .5s var(--ease),visibility 0s}
+.d-top{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;padding:14px 14px 6px 22px;background:var(--surface);z-index:1}
+.d-eyebrow{font-size:11.5px;font-weight:600;letter-spacing:.1em;color:var(--muted)}
+.d-body{padding:0 22px 22px}
+.d-title{font-family:var(--font-display);font-size:22px;font-weight:600;line-height:1.3}
+.d-num{font-family:var(--font-mono);font-size:13px;font-weight:500;color:var(--muted);margin-right:8px;vertical-align:2px}
+.d-en{font-family:var(--font-mono);font-size:12px;color:var(--muted);margin-top:4px}
+.d-ev{display:flex;align-items:flex-start;gap:9px;margin-top:14px;padding:9px 11px;border-radius:9px;background:var(--surface-2);font-size:12px;color:var(--fg-2);line-height:1.55}
+.d-ev svg{flex-shrink:0;margin-top:3px}
+.d-ev b{color:var(--fg);font-weight:600}
+.d-sec{margin-top:18px}
+.d-sec h3{font-size:11.5px;font-weight:600;letter-spacing:.1em;color:var(--muted);margin-bottom:5px}
+.d-sec p{font-size:14px;line-height:1.7;color:var(--fg-2)}
+.d-sec.eg p{font-size:13.5px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.d-sec.ask p{color:var(--fg)}
+.d-term{margin-top:10px;font-size:12.5px;line-height:1.6;color:var(--muted)}
+.d-src{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:5px;font-size:12.5px;line-height:1.55}
+.d-src a{color:var(--accent);text-decoration:none;border-bottom:1px solid var(--accent-soft)}
+.d-src a:hover{border-bottom-color:var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 11px;font-size:12.5px;cursor:pointer;transition:border-color .2s,background .2s,color .2s}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+.chip-rel{color:var(--muted);font-size:11.5px}
+
+.legend{position:absolute;z-index:11;top:14px;left:max(14px,env(safe-area-inset-left,0px));background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);font-size:12.5px;overflow:hidden}
+.lg-toggle{display:flex;align-items:center;gap:8px;border:0;background:none;padding:8px 12px;cursor:pointer;font-size:12.5px;font-weight:600;color:var(--fg-2)}
+.lg-toggle svg{width:10px;height:10px;stroke:currentColor;fill:none;stroke-width:1.6;transition:transform .3s var(--ease)}
+.lg-toggle[aria-expanded="true"] svg{transform:rotate(180deg)}
+.lg-body{padding:0 8px 10px;width:228px;box-sizing:border-box}
+.lg-title{font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--muted);padding:8px 6px 4px}
+.lg-row{display:flex;align-items:center;gap:9px;width:100%;border:0;background:none;padding:5px 6px;border-radius:7px;text-align:left;font-size:12.5px;color:var(--fg-2)}
+button.lg-row{cursor:pointer;transition:background .2s,opacity .2s}
+button.lg-row:hover{background:var(--surface-2)}
+button.lg-row.on{background:var(--accent-soft);color:var(--accent)}
+.legend.filtering button.lg-row:not(.on){opacity:.5}
+.lg-row svg{flex-shrink:0;overflow:visible}
+.lg-row .g-ring{fill:var(--surface)}
+
+.zoom{position:absolute;z-index:11;right:max(14px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:hidden}
+.zoom button{width:34px;height:32px;border:0;background:none;cursor:pointer;color:var(--fg-2);display:grid;place-items:center;transition:background .2s}
+.zoom button+button{border-top:1px solid var(--line)}
+.zoom button:hover{background:var(--surface-2)}
+.zoom svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round}
+
+/* hover readout: a slim bar along the bottom edge, in space the map fit keeps clear */
+.tip{position:absolute;z-index:13;pointer-events:none;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));max-width:min(780px,calc(100% - 140px));box-sizing:border-box;padding:9px 16px;border-radius:12px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);font-size:12.5px;line-height:1.6;color:var(--fg-2);opacity:0;transform:translate(-50%,6px);transition:opacity .2s,transform .25s var(--ease)}
+.tip.show{opacity:1;transform:translate(-50%,0)}
+.tip b{margin-right:8px;font-size:13.5px;font-weight:600;color:var(--accent)}
+.tip .t-meta{margin-left:10px;color:var(--muted);white-space:nowrap}
+
+.caret{display:inline-block;width:2px;height:1.05em;background:var(--accent);vertical-align:-.15em;margin-left:3px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+
+body.mode-tour .legend,body.mode-tour .zoom,body.has-primer .legend,body.has-primer .zoom{display:none}
+
+@media (max-width:760px){
+  .brand p{display:none}
+  .search{order:9;width:100%}
+  .seg-label{display:none}
+  .primer{padding-block:20px}
+  .vs,.primer-facts{grid-template-columns:minmax(0,1fr)}
+  .primer-actions .btn{flex:1;justify-content:center}
+  .guide{top:auto;left:max(8px,env(safe-area-inset-left,0px));right:max(8px,env(safe-area-inset-right,0px));bottom:calc(8px + env(safe-area-inset-bottom,0px));width:auto;height:58%}
+  .g-parts{gap:10px}
+  .gp-bars button{width:11px}
+  .gp-bars button.now{width:18px}
+  .sim-body{grid-template-columns:minmax(0,1fr)}
+  .sim{padding:14px 16px}
+  .answer{min-height:0}
+  .drawer{top:auto;left:max(8px,env(safe-area-inset-left,0px));right:max(8px,env(safe-area-inset-right,0px));bottom:calc(8px + env(safe-area-inset-bottom,0px));width:auto;max-height:62%;transform:translateY(calc(100% + 24px))}
+  body.has-card .zoom{display:none}
+  .kbd-hint{display:none}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none !important;transition:none !important}
+}
+</style>
+
+<header class="topbar">
+  <div class="brand">
+    <h1>GEO 结构图</h1>
+    <p>中国餐饮品牌出海纽约 · 咨询师入门</p>
+  </div>
+  <div class="seg" id="modeSeg" aria-label="模式">
+    <span class="thumb"></span>
+    <button type="button" data-v="tour" aria-pressed="false">导览</button>
+    <button type="button" data-v="explore" aria-pressed="true">探索</button>
+  </div>
+  <div class="seg" id="viewSeg" aria-label="视图">
+    <span class="thumb"></span>
+    <button type="button" data-v="struct" aria-pressed="true">结构</button>
+    <button type="button" data-v="causal" aria-pressed="false">因果</button>
+  </div>
+  <div class="search">
+    <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5"></circle><path d="M11 11l3.5 3.5"></path></svg>
+    <input id="q" type="search" placeholder="搜索节点，如 Yelp、提及率" autocomplete="off" aria-label="搜索节点">
+    <div class="results" id="results" hidden></div>
+  </div>
+  <button type="button" class="btn" id="simBtn" aria-pressed="false">门槛模拟器</button>
+</header>
+
+<main class="stage" id="stage">
+  <svg id="map" aria-label="GEO 结构图">
+    <defs>
+      <marker id="arr" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto"><path class="arr-path" d="M2,1.5 L8.5,5 L2,8.5"></path></marker>
+      <marker id="arrLit" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto"><path class="arr-path lit" d="M2,1.5 L8.5,5 L2,8.5"></path></marker>
+    </defs>
+    <g id="world"><g id="zones"></g><g id="edges"></g><g id="nodes"></g><g id="fx"><g id="particle"><circle class="p-halo" r="23"></circle><circle class="p-ring" r="17"></circle><circle class="p-core" r="5"></circle></g></g></g>
+  </svg>
+
+  <div class="legend" id="legend">
+    <button type="button" class="lg-toggle" id="lgToggle" aria-expanded="false">图例<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5l3 3 3-3"></path></svg></button>
+    <div class="lg-body" id="lgBody" hidden></div>
+  </div>
+
+  <div class="zoom" aria-label="缩放">
+    <button type="button" id="zIn" aria-label="放大"><svg viewBox="0 0 14 14"><path d="M7 2v10M2 7h10"></path></svg></button>
+    <button type="button" id="zOut" aria-label="缩小"><svg viewBox="0 0 14 14"><path d="M2 7h10"></path></svg></button>
+    <button type="button" id="zFit" aria-label="显示全部"><svg viewBox="0 0 14 14"><path d="M2 5V2h3M9 2h3v3M12 9v3H9M5 12H2V9"></path></svg></button>
+  </div>
+
+  <div class="tip" id="tip"></div>
+  <aside class="drawer" id="drawer" aria-hidden="true"></aside>
+
+  <section class="primer enter" id="primer" aria-label="一句话理解 GEO">
+    <div class="primer-inner">
+      <div class="primer-head">
+        <h2 class="primer-h">GEO，就是让品牌出现在 AI 的回答里。</h2>
+        <p class="primer-lead">GEO 的全称是 Generative Engine Optimization，中文叫生成式引擎优化。它关心一件事：消费者去问 ChatGPT、Google AI 这类助手时，你的品牌会不会被提到、排在第几、被怎么描述。</p>
+      </div>
+      <div class="vs">
+        <figure class="vs-card">
+          <span class="vs-tag">过去：用搜索引擎找餐厅</span>
+          <div class="mock" aria-hidden="true">
+            <div class="mock-bar"><svg viewBox="0 0 16 16"><circle cx="7" cy="7" r="5"></circle><path d="M11 11l3.5 3.5"></path></svg>best hot pot manhattan</div>
+            <div class="mock-link"><i style="width:56%"></i><i style="width:88%"></i></div>
+            <div class="mock-link"><i style="width:44%"></i><i style="width:80%"></i></div>
+            <div class="mock-link"><i style="width:62%"></i><i style="width:92%"></i></div>
+            <span class="mock-more">还有 7 条链接</span>
+          </div>
+          <p>搜索引擎给出 10 条链接，用户自己点开比较。品牌争的是<b>排名</b>，这是 SEO。</p>
+        </figure>
+        <figure class="vs-card now">
+          <span class="vs-tag">现在：直接问 AI</span>
+          <div class="mock" aria-hidden="true">
+            <div class="mock-q">Best hot pot in Manhattan for a group of 6?</div>
+            <div class="mock-a">Here are three great options:
+              <ol><li>Restaurant A, East Village</li><li class="you">你的品牌, Midtown</li><li>Restaurant B, Chinatown</li></ol>
+            </div>
+          </div>
+          <p>AI 直接推荐 3 家，用户常常不再点开链接。品牌争的是<b>被 AI 说出来</b>，这是 GEO。</p>
+        </figure>
+      </div>
+      <ul class="primer-facts">
+        <li><b>名额只有 3 到 5 个</b>进不了这份名单，品牌对这位用户就等于不存在。</li>
+        <li><b>没法直接告诉 AI</b>品牌只能影响 AI 会读到的网页、评价和商家资料。</li>
+        <li><b>同一个问题，答案会变</b>所以要拿一组问题反复问，再统计结果。</li>
+      </ul>
+      <div class="primer-actions">
+        <button type="button" class="btn btn-primary btn-lg" id="inStart">跟一个问题走一遍</button>
+        <button type="button" class="btn btn-lg" id="inSkip">直接看结构图</button>
+        <span>导览共 13 步，约 3 分钟</span>
+      </div>
+    </div>
+  </section>
+
+  <aside class="guide" id="guide" hidden aria-live="polite">
+    <div class="g-head">
+      <div class="g-parts" id="gParts"></div>
+      <button type="button" class="icon-btn" id="tcClose" aria-label="退出导览">×</button>
+    </div>
+    <div class="g-scroll" id="gScroll">
+      <div class="g-content" id="gContent">
+        <p class="g-eyebrow" id="gEyebrow"></p>
+        <h2 class="g-title" id="tcTitle"></h2>
+        <p class="g-body" id="tcBody"></p>
+        <div id="gCase"></div>
+      </div>
+    </div>
+    <div class="g-foot">
+      <span class="tc-step" id="tcStep"></span>
+      <span class="kbd-hint">← → 翻页</span>
+      <span class="sp"></span>
+      <button type="button" class="btn" id="tcPrev">上一步</button>
+      <button type="button" class="btn btn-primary" id="tcNext">下一步</button>
+    </div>
+  </aside>
+
+  <section class="card bottom-card sim" id="sim" hidden>
+    <div class="sim-head">
+      <div>
+        <h2>门槛模拟器</h2>
+        <p>关掉任意一道门槛，再播放一次，看品牌会在哪一步被淘汰。</p>
+      </div>
+      <button type="button" class="icon-btn" id="simClose" aria-label="关闭模拟器">×</button>
+    </div>
+    <div class="sim-body">
+      <div class="sim-controls">
+        <label class="sw"><input type="checkbox" id="sw-g1" checked><span class="track"></span><span class="sw-text"><b>能被找到</b><small>技术可访问 + 本地数据</small></span></label>
+        <label class="sw"><input type="checkbox" id="sw-g2" checked><span class="track"></span><span class="sw-text"><b>能被读懂</b><small>实体统一 + 结构化内容</small></span></label>
+        <label class="sw"><input type="checkbox" id="sw-g3" checked><span class="track"></span><span class="sw-text"><b>值得信任</b><small>第三方口碑 + 实体统一</small></span></label>
+        <button type="button" class="btn btn-primary sim-play" id="simPlay">▶ 播放</button>
+      </div>
+      <div class="answer" id="answer"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+'use strict';
+const RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const NS = 'http://www.w3.org/2000/svg';
+const $ = s => document.querySelector(s);
+
+/* ---------------- content ---------------- */
+const EV = {
+  A:{name:'学术研究', desc:'有同行评审论文支持（Aggarwal 等，KDD 2024）。'},
+  O:{name:'平台官方', desc:'来自 OpenAI、Google 等平台的官方文档或公告。'},
+  I:{name:'行业数据', desc:'来自厂商报告或行业实践，作方向性参考。'},
+  F:{name:'分析框架', desc:'本看板的归纳与判断，适合内部讨论，对客户使用时请标注。'}
+};
+const DIMS = {
+  why:{name:'为什么重要'}, eng:{name:'AI 如何生成答案'}, gate:{name:'三道门槛'},
+  lev:{name:'品牌发力点'}, src:{name:'信息来源'}, met:{name:'衡量指标'}, risk:{name:'出海风险与趋势'}
+};
+const Q = 'Best Sichuan hot pot in Manhattan for a group of 6, around $50 per person?';
+
+const NODES = [
+  {id:'geo', kind:'center', label:'GEO', en:'Generative Engine Optimization', ev:'A',
+   def:'生成式引擎优化：让品牌在 AI 生成的回答里被提到、被推荐、被准确描述的一套方法。',
+   how:'GEO 不改 AI 本身，而是影响 AI 会读取的材料，让品牌更容易被找到、被读懂、被信任。',
+   eg:'游客问 ChatGPT「曼哈顿有什么好的川味火锅」，GEO 决定你的品牌会不会出现在那 3–5 家推荐里。',
+   ask:'客户知道 AI 现在是怎么描述自己的吗？',
+   src:[['Aggarwal 等，GEO: Generative Engine Optimization（KDD 2024）','https://arxiv.org/abs/2311.09735']]},
+
+  {id:'h_why', dim:'why', kind:'hub', label:'为什么重要', en:'Why it matters', ev:'F',
+   def:'消费者的决策入口正在转向 AI，餐饮品牌受影响尤其明显。',
+   how:'这一组解释为什么现在就要关注 GEO，适合在项目开场时对客户讲。'},
+  {id:'w1', dim:'why', kind:'leaf', label:'入口迁移到 AI', en:'AI as the new front door', ev:'I',
+   def:'越来越多消费者先问 AI，再决定去哪吃。',
+   how:'搜索引擎和点评 App 的部分决策环节，正在被 AI 对话替代。',
+   eg:'游客在 ChatGPT 里问 “Where should I eat near Times Square tonight?”，不再自己翻 Yelp。',
+   ask:'客户的顾客里，有多少人是先问过 AI 才来的？能否在点单或预订环节加一个来源问题？'},
+  {id:'w2', dim:'why', kind:'leaf', label:'名单效应 / 零点击', en:'Shortlist & zero-click', ev:'I',
+   def:'AI 通常只给 3–5 个推荐，用户常常不再点开链接。',
+   how:'进不进名单是 0 和 1 的区别。在传统搜索里排第 11 位还有曝光，在 AI 回答里就等于不存在。',
+   eg:'“Best soup dumplings in NYC” 的回答里只列了 4 家。',
+   ask:'在客户最核心的 10 个场景问题里，品牌现在进了几个名单？'},
+  {id:'w3', dim:'why', kind:'leaf', label:'场景化本地提问', en:'Scenario & local queries', ev:'F',
+   def:'餐饮提问几乎都带着场景、地点和价位。',
+   how:'这类问题 AI 基本都会联网检索，所以品牌在短期内就能影响结果。',
+   eg:'“Group dinner for 8 in Flushing, around $40 per person.”',
+   ask:'客户最想赢下哪几类场景：约会、聚餐、商务宴请，还是一人食？'},
+  {id:'w4', dim:'why', kind:'leaf', label:'信息时效性', en:'Freshness', ev:'F',
+   def:'营业时间、菜单、价格和门店变动快，AI 很容易引用旧信息。',
+   how:'旧信息会直接造成到店失败和差评，进一步伤害口碑。',
+   eg:'AI 把已经搬迁的门店旧地址给了用户。',
+   ask:'客户各平台的门店信息多久更新一次？由谁负责？'},
+  {id:'w5', dim:'why', kind:'leaf', label:'出海双受众', en:'Two audiences', ev:'F',
+   def:'纽约门店同时面对美国本地食客和华人顾客，两群人用的 AI 和平台不同。',
+   how:'需要英文和中文两套内容，也需要两套监测。',
+   eg:'本地食客问 ChatGPT、看 Yelp；留学生刷小红书，也会问中文 AI。',
+   ask:'客户目前的顾客里，本地食客和华人大概各占多少？'},
+
+  {id:'h_eng', dim:'eng', kind:'hub', label:'AI 如何生成答案', en:'How AI answers', ev:'F',
+   def:'AI 从收到问题到给出推荐的完整流程：9 个步骤，外加一条「模型记忆」支线。',
+   how:'这 9 步是根据 RAG（检索增强生成）研究和平台公开文档整理的简化模型，各平台都没有公布完整流程。品牌控制不了这个流程，但可以影响流程中读到的材料。三道门槛就落在其中三步上。'},
+  {id:'e1', dim:'eng', kind:'step', num:'01', label:'用户提问', en:'Prompt', ev:'F',
+   def:'用户用自然语言说出完整需求。',
+   how:'问题越具体、越本地，AI 越倾向联网检索。',
+   eg:Q,
+   ask:'客户的目标顾客会怎么问？能列出 20 个真实的问法吗？'},
+  {id:'e2', dim:'eng', kind:'step', num:'02', label:'理解需求', en:'Intent understanding', ev:'F',
+   term:'业内通常叫 intent understanding（意图理解），是搜索和对话系统的通用说法。',
+   def:'AI 把问题拆成菜系、地点、人数、价位等具体条件。',
+   how:'品牌信息里没写清这些条件，就很难和问题匹配上。',
+   eg:'拆出：川味 / 火锅 / 曼哈顿 / 6 人 / 人均约 50 美元。',
+   ask:'客户的官网和商家资料里，写清人均价格和最多可坐几人了吗？'},
+  {id:'e3', dim:'eng', kind:'step', num:'03', label:'判断是否联网', en:'Search decision', ev:'O',
+   term:'OpenAI 的说法是：ChatGPT 会根据问题自动决定是否搜索网络。',
+   def:'AI 决定是靠自己的记忆回答，还是联网去查。',
+   how:'本地、时效类问题通常会触发联网搜索，品牌的改动几天到几周就可能反映在答案里。',
+   eg:'问「火锅是什么」不用查；问「曼哈顿哪家火锅好」就要查。',
+   ask:'客户想赢的问题，大多属于需要联网的那一类吗？',
+   src:[['OpenAI：爬虫与 ChatGPT 搜索说明','https://developers.openai.com/api/docs/bots']]},
+  {id:'e4', dim:'eng', kind:'step', num:'04', label:'扩展搜索词', en:'Query fan-out', ev:'O',
+   term:'Query fan-out 是 Google 发布 AI Mode 时使用的官方术语，中文可以理解为「查询扩展」。',
+   def:'AI 把一个问题改写成多个相关的搜索词，同时去搜。',
+   how:'品牌要覆盖的是一组相关搜索词，而不是一个关键词。Google 表示，AI Mode 和 AI Overviews 会跨多个子话题和数据源同时发起搜索。',
+   eg:'“best hot pot Manhattan” · “Sichuan hot pot NYC reddit” · “hot pot large group Manhattan”',
+   ask:'客户在这些搜索词下的搜索结果里出现了吗？',
+   src:[['Search Engine Journal：Google 对 query fan-out 的说明','https://www.searchenginejournal.com/query-fan-out-technique-in-ai-mode-new-details-from-google/']]},
+  {id:'e5', dim:'eng', kind:'step', num:'05', label:'检索网页', en:'Retrieval', ev:'O',
+   term:'对应 RAG（检索增强生成）里的 Retrieval（检索），是学术界和业界通用的术语。',
+   def:'搜索返回一批候选网页：榜单、点评、论坛、官网、商家资料。',
+   how:'这一步由「能被找到」把关：不在候选网页里，后面就没有机会。',
+   eg:'Eater 榜单、Yelp 页面、Reddit 讨论帖、Tripadvisor 点评、品牌官网。',
+   ask:'搜索客户品牌时，前 20 条结果分别是什么网站？',
+   src:[['OpenAI：OAI-SearchBot 与搜索收录','https://developers.openai.com/api/docs/bots']]},
+  {id:'e6', dim:'eng', kind:'step', num:'06', label:'提取关键信息', en:'Passage extraction', ev:'A',
+   term:'业内常叫 passage extraction 或 chunk selection（段落筛选），各平台没有统一的官方叫法。',
+   def:'AI 不会通读整页，只挑出和问题最相关的段落，从中提取事实。',
+   how:'这一步由「能被读懂」把关。GEO 论文发现，内容的写法（比如有没有具体数字、引语和出处）会明显影响被采用的概率。',
+   eg:'“Large tables for 8, about $45 per person, known for its beef-tallow mala broth.”',
+   ask:'客户的菜单和价格是能复制的文字，还是图片和 PDF？',
+   src:[['Aggarwal 等，GEO: Generative Engine Optimization（KDD 2024）','https://arxiv.org/abs/2311.09735']]},
+  {id:'e7', dim:'eng', kind:'step', num:'07', label:'多源比对', en:'Corroboration', ev:'I',
+   term:'这是对 AI 选择逻辑的简化描述，平台没有公开官方名称；行业常用 corroboration（多方印证）来形容。',
+   def:'AI 比较多个来源的说法，倾向推荐被多方一致认可的选项。',
+   how:'这一步由「值得信任」把关：只有自家官网说好，说服力很弱。',
+   eg:'Eater 推荐 + Reddit 好评 + Yelp 4.5 分，AI 就有信心把这家写进答案。',
+   ask:'除了自有渠道，最近半年有哪些第三方提到过客户？'},
+  {id:'e8', dim:'eng', kind:'step', num:'08', label:'生成回答', en:'Grounded answer', ev:'O',
+   term:'Google 把「基于检索到的来源生成回答」称为 grounding，回答会附上引用链接。',
+   def:'AI 写出一段回答，列出推荐、理由和引用来源。',
+   how:'品牌在这里被提及、排序和描述，也是所有指标测量的对象。',
+   eg:'「1. … 2. … 3. …」，每家附一句理由和来源链接。',
+   ask:'AI 现在用哪些词描述客户？和客户想要的定位一致吗？'},
+  {id:'e9', dim:'eng', kind:'step', num:'09', label:'用户行动', en:'User action', ev:'O',
+   def:'用户点进链接、导航过去，或者直接让 AI 订位。',
+   how:'回答和交易之间的距离越来越短。Google AI Mode 已经可以代用户预订餐厅。',
+   eg:'“Book a table for 6 at 7pm.” 由 AI 直接完成。',
+   ask:'客户接入了哪些订座系统？在 Google 上能直接预订吗？',
+   src:[['SiliconANGLE：Google AI Mode 推出代订餐厅','https://siliconangle.com/2025/08/21/google-opens-ai-mode-globally-personalized-agentic-capabilities/']]},
+  {id:'e10', dim:'eng', kind:'leaf', label:'模型记忆', en:'Model memory', ev:'I',
+   def:'AI 训练时读过的内容，形成它对品牌的「印象」。',
+   how:'不联网时，AI 靠它回答。这部分变化慢，需要长期口碑积累。',
+   eg:'问「纽约有哪些知名的中餐品牌」，AI 可能直接凭记忆列出名单。',
+   ask:'客户在英文媒体上被报道过多少次？'},
+
+  {id:'h_gate', dim:'gate', kind:'hub', label:'三道门槛', en:'Three gates', ev:'F',
+   def:'品牌要出现在回答里，必须依次通过的三关。',
+   how:'每道门槛对应流程中的一步：检索网页、提取关键信息、多源比对。任何一关失败，后面就没有机会。'},
+  {id:'g1', dim:'gate', kind:'gate', label:'能被找到', en:'Findable', ev:'O',
+   def:'AI 检索时，候选网页里有你。',
+   how:'取决于网站能否被 AI 爬虫抓取、商家资料是否完整、有没有进入榜单和点评页。',
+   eg:'官网在 robots.txt 里屏蔽了 OAI-SearchBot，就不会出现在 ChatGPT 搜索的引用里。',
+   ask:'客户官网的 robots.txt 允许 AI 搜索爬虫吗？',
+   src:[['OpenAI：OAI-SearchBot 与搜索收录','https://developers.openai.com/api/docs/bots']]},
+  {id:'g2', dim:'gate', kind:'gate', label:'能被读懂', en:'Readable', ev:'I',
+   def:'AI 能从页面里准确摘出你的信息。',
+   how:'写成文字、结构清楚、名称统一的信息，更容易被 AI 提取和匹配。',
+   eg:'中文名、拼音和英文名混用，AI 可能当成三家不同的店。',
+   ask:'客户在各个平台用的英文名一致吗？'},
+  {id:'g3', dim:'gate', kind:'gate', label:'值得信任', en:'Trusted', ev:'A',
+   def:'多个独立来源一致认可你。',
+   how:'GEO 论文发现，引用来源、加入引语和统计数据能把可见度提升最多约 40%。第三方媒体和真实评价是 AI 判断可信度的主要依据。',
+   eg:'有 Eater 报道和 Reddit 好评的店，比只有自家广告的店更容易被推荐。',
+   ask:'客户手上有哪些能被引用的第三方背书？',
+   src:[['Aggarwal 等，GEO: Generative Engine Optimization（KDD 2024）','https://arxiv.org/abs/2311.09735']]},
+
+  {id:'h_lev', dim:'lev', kind:'hub', label:'品牌发力点', en:'Brand levers', ev:'F',
+   def:'品牌可以采取的六类行动。',
+   how:'每道门槛由两个发力点共同决定；「监测纠偏」把结果反馈回来，形成闭环。'},
+  {id:'l1', dim:'lev', kind:'leaf', label:'实体统一', en:'Entity consistency', ev:'I',
+   def:'品牌名、地址、电话和营业时间在所有平台保持一致。',
+   how:'让 AI 确认这些信息说的是同一家店，既帮它读懂，也帮它做多源比对。',
+   eg:'统一使用一个英文名，并在官网写明对应的中文名和拼音。',
+   ask:'客户能拿出一份各平台信息对照表吗？'},
+  {id:'l2', dim:'lev', kind:'leaf', label:'结构化内容', en:'Structured content', ev:'A',
+   def:'把菜单、价格、适合场景和常见问题写成文字，并加上 Schema 结构化数据。',
+   how:'有数字、有结论、有出处的段落，更容易被 AI 提取和引用。',
+   eg:'官网 FAQ：“Can you seat a group of 10? Yes, our private room fits up to 12.”',
+   ask:'客户官网有 FAQ 和文字版菜单吗？'},
+  {id:'l3', dim:'lev', kind:'leaf', label:'第三方口碑', en:'Earned reputation', ev:'I',
+   def:'媒体报道、榜单、真实评价和社区讨论。',
+   how:'这是 AI 做多源比对的主要依据，也是品牌长期进入模型记忆的途径。',
+   eg:'争取进入 Eater NY 的榜单地图；鼓励满意的顾客在 Google 和 Yelp 留评价。',
+   ask:'客户今年有纽约本地的媒体公关计划吗？'},
+  {id:'l4', dim:'lev', kind:'leaf', label:'本地数据', en:'Local listings', ev:'I',
+   def:'Google 商家资料、Yelp、Apple 地图、订座和外卖平台上的门店数据。',
+   how:'本地问题的事实信息大多来自这些平台。',
+   eg:'在 Google 商家资料里补全人均价位、营业时间、菜单链接和预订入口。',
+   ask:'客户的 Google 商家资料完整度如何？由谁维护？'},
+  {id:'l5', dim:'lev', kind:'leaf', label:'技术可访问', en:'Technical access', ev:'O',
+   def:'网站能被 AI 爬虫抓取，内容不藏在图片、PDF 或脚本里。',
+   how:'这是「能被找到」的前提。这一步做不到，其他工作都白做。',
+   eg:'在 robots.txt 里允许 OAI-SearchBot；菜单用网页文字，而不是图片。',
+   ask:'客户的官网由谁维护？能改 robots.txt 吗？'},
+  {id:'l6', dim:'lev', kind:'leaf', label:'监测纠偏', en:'Monitor & correct', ev:'I',
+   def:'定期用一组问题测试 AI 的回答，发现问题就回到其他发力点去修。',
+   how:'AI 的答案有随机性，只能长期、批量地测量。',
+   eg:'每月跑 50 个问题 × 4 个 AI × 每题 3 次，追踪提及率的变化。',
+   ask:'客户愿意每月投入多少预算做监测？'},
+
+  {id:'h_src', dim:'src', kind:'hub', label:'信息来源', en:'Sources', ev:'I',
+   def:'AI 检索时实际读取的平台和网站。按「谁掌握这条信息」分成六类：品牌自有、平台商家资料、点评平台、社区与社交、编辑媒体、交易平台，另加覆盖华人顾客的中文生态。',
+   how:'不同 AI 偏好的来源不一样。一项研究中，ChatGPT 在 42.5% 的餐厅回答里引用了 Tripadvisor，Google AI Mode 只有 12.5%，而且 AI Mode 有 40% 的回答只链接 Google 自家的商家资料。所以来源要按平台分别看。',
+   src:[['Qvery：Tripadvisor 在 ChatGPT 与 AI Mode 中的引用对比','https://qvery.ai/blog/tripadvisor-ai-citations-statistics/'],['Local Falcon：美国餐厅 AI 可见度指数','https://www.localfalcon.com/blog/the-restaurant-ai-visibility-index-how-restaurants-appear-in-ai-search']]},
+  {id:'s1', dim:'src', kind:'leaf', grp:'品牌自有', label:'品牌官网', en:'Brand website', ev:'I',
+   def:'品牌完全可控的信息源。',
+   how:'Yext 2025 年分析了 680 万条 AI 引用：餐饮类约 40% 来自品牌官网，约 42% 来自各类商家资料平台。官网是事实信息的权威出处，但只靠它很难建立信任。',
+   eg:'文字版菜单、门店页、品牌故事和 FAQ 页面。',
+   ask:'官网有英文版吗？菜单是可复制的文字吗？',
+   src:[['OpenLens：餐厅 AI 可见度公开数据汇总（引用 Yext 研究）','https://openlens.com/blog/en/ai-visibility-restaurants-2026']]},
+  {id:'s2', dim:'src', kind:'leaf', grp:'平台商家资料', label:'Google 商家资料', en:'Google Business Profile', ev:'I',
+   def:'Google 地图和搜索里的门店信息卡片。',
+   how:'Google 的 AI 回答餐厅问题时最依赖它：BrightLocal 统计餐厅类 AI 引用中 45% 来自 Google 商家资料，Local Falcon 的结果是 48.6%。订座入口也在这里。',
+   eg:'营业时间、人均价位、照片、评价和 “Reserve a table” 按钮。',
+   ask:'客户每家门店的商家资料都认领并补全了吗？',
+   src:[['BrightLocal：AI 搜索的本地数据来源','https://www.brightlocal.com/resources/ai-directory-sources/'],['Local Falcon：美国餐厅 AI 可见度指数','https://www.localfalcon.com/blog/the-restaurant-ai-visibility-index-how-restaurants-appear-in-ai-search']]},
+  {id:'s3', dim:'src', kind:'leaf', grp:'平台商家资料', label:'其他地图数据', en:'Apple · Bing · Foursquare', ev:'I',
+   def:'Apple 商家连接、Bing Places，以及 Foursquare 这类位置数据服务。',
+   how:'行业分析认为，ChatGPT 的本地结果主要来自 Foursquare 和 Bing 的数据，而不是 Google；Siri 和 Apple 地图使用 Apple 自己的商家数据。具体比例未经 OpenAI 官方证实。',
+   eg:'门店在 Google 上信息完整，但没认领 Bing Places，ChatGPT 里就可能显示旧地址。',
+   ask:'客户在 Apple 和 Bing 上认领门店了吗？',
+   src:[['Local Falcon：ChatGPT 本地搜索的数据来源','https://www.localfalcon.com/blog/chatgpt-local-search-data-sources-where-does-business-info-come-from']]},
+  {id:'s4', dim:'src', kind:'leaf', grp:'点评平台', label:'Yelp', en:'Yelp', ev:'I',
+   def:'美国主流的餐厅点评平台。',
+   how:'AirOps 统计 2025 年第四季度，Yelp 在餐厅类 AI 引用中有 14,100 次，是 Tripadvisor 的 3 倍多；在 Google AI 引用的外部网站中也排第一。',
+   eg:'评分、评价数量和最近的评价内容都会被 AI 读到。',
+   ask:'客户在 Yelp 上的评分和评价数量，和竞品比怎么样？',
+   src:[['PPC Land：Yelp 在 AI 本地搜索中的引用量','https://ppc.land/yelp-gets-3-4x-more-ai-citations-than-any-rival-in-new-local-search-data/'],['Local Falcon：美国餐厅 AI 可见度指数','https://www.localfalcon.com/blog/the-restaurant-ai-visibility-index-how-restaurants-appear-in-ai-search']]},
+  {id:'s5', dim:'src', kind:'leaf', grp:'点评平台', label:'Tripadvisor', en:'Tripadvisor', ev:'I',
+   def:'全球性的旅行点评平台，游客常用。',
+   how:'平台差异明显：一项研究中 ChatGPT 在 42.5% 的餐厅回答里引用了它，Google AI Mode 只有 12.5%。对吸引游客的门店尤其重要。',
+   eg:'时代广场、中城附近门店的游客点评。',
+   ask:'客户在 Tripadvisor 上认领门店了吗？',
+   src:[['Qvery：Tripadvisor 在 ChatGPT 与 AI Mode 中的引用对比','https://qvery.ai/blog/tripadvisor-ai-citations-statistics/']]},
+  {id:'s6', dim:'src', kind:'leaf', grp:'社区与社交', label:'Reddit', en:'Reddit', ev:'I',
+   def:'美国最大的社区论坛，r/FoodNYC 等板块很活跃。',
+   how:'各研究的结果差异很大：Local Falcon 统计它在 Google AI 的餐厅引用中只占 2.3%，另一项 551 条回答的小样本研究中，它出现在 58% 的回答里。适合当作口碑信号，不宜高估。',
+   eg:'“Best hot pot in Manhattan?” 这类帖子里的高赞回复。',
+   ask:'客户品牌在 r/FoodNYC 被讨论过吗？评价怎么样？',
+   src:[['Local Falcon：美国餐厅 AI 可见度指数','https://www.localfalcon.com/blog/the-restaurant-ai-visibility-index-how-restaurants-appear-in-ai-search'],['Pluspoint：551 条 AI 餐厅推荐回答分析','https://www.pluspoint.io/blog/what-ai-recommends-when-diners-ask-where-to-eat']]},
+  {id:'s7', dim:'src', kind:'leaf', grp:'编辑媒体', label:'媒体与榜单', en:'Media & guides', ev:'F',
+   def:'Eater NY、The Infatuation、NYT、Time Out、米其林指南等。',
+   how:'权威度高，是交叉印证时有分量的证据。不过目前缺少专门统计它们被 AI 引用比例的公开数据。',
+   eg:'进入 Eater 的 “Best Chinese restaurants in NYC” 榜单地图。',
+   ask:'客户在纽约有本地公关资源吗？'},
+  {id:'s8', dim:'src', kind:'leaf', grp:'交易平台', label:'订座外卖平台', en:'Booking & delivery', ev:'I',
+   def:'OpenTable、Resy、DoorDash、Uber Eats 等平台。',
+   how:'BrightLocal 统计餐厅类 AI 引用中 OpenTable 占 6.6%。这类平台提供价格、菜单和可订时段等结构化数据，AI 代订时会直接调用。',
+   eg:'AI Mode 根据餐厅的可订时段来推荐和预订。',
+   ask:'客户接入了哪些订座和外卖平台？',
+   src:[['BrightLocal：AI 搜索的本地数据来源','https://www.brightlocal.com/resources/ai-directory-sources/']]},
+  {id:'s9', dim:'src', kind:'leaf', grp:'社区与社交', label:'TikTok / Instagram', en:'Social video', ev:'F',
+   def:'短视频和图片社交平台。',
+   how:'Yext 统计餐饮类 AI 引用中「评价与社交」合计约 13%，社交视频本身被直接引用的公开数据很少。它的主要作用是带动其他平台上的评价和讨论。',
+   eg:'探店博主的一条火锅视频，带来一波 Yelp 新评价。',
+   ask:'客户和哪些纽约美食博主合作过？',
+   src:[['OpenLens：餐厅 AI 可见度公开数据汇总（引用 Yext 研究）','https://openlens.com/blog/en/ai-visibility-restaurants-2026']]},
+  {id:'s10', dim:'src', kind:'leaf', grp:'中文生态', label:'中文生态', en:'Chinese platforms', ev:'A',
+   def:'小红书、微信公众号、大众点评等中文平台。',
+   how:'研究发现，AI 会优先引用和提问语言相同的来源。所以中文内容主要影响华人用中文提问时的回答，对英文提问的作用有限。',
+   eg:'留学生用中文问「曼哈顿哪家火锅好」，AI 更可能引用中文内容；美国食客用英文问，主要引用英文网站。',
+   ask:'客户在小红书上有官方账号吗？',
+   src:[['Sharma 等，Faux Polyglot（NAACL 2025）','https://arxiv.org/abs/2407.05502'],['多语言 RAG 的引用语言偏好研究（arXiv 2509.13930）','https://arxiv.org/abs/2509.13930']]},
+
+  {id:'h_met', dim:'met', kind:'hub', label:'衡量指标', en:'Metrics', ev:'F',
+   def:'衡量品牌在 AI 回答中表现的六个指标。',
+   how:'AI 的答案有随机性，所以要用一组问题、在多个平台上重复测量，再统计结果。'},
+  {id:'m1', dim:'met', kind:'leaf', label:'提及率', en:'Mention rate', ev:'I',
+   def:'在一组相关问题里，品牌被提到的比例。',
+   how:'这是 GEO 最核心的指标。因为答案有随机性，同一个问题要测多次。',
+   eg:'100 次「曼哈顿火锅推荐」中出现 34 次，提及率就是 34%。',
+   ask:'客户最在意哪些问题上的提及率？'},
+  {id:'m2', dim:'met', kind:'leaf', label:'声量份额', en:'Share of voice', ev:'I',
+   def:'品牌被提及的次数，占所有竞品提及总数的比例。',
+   how:'它反映相对位置，比绝对数字更能说明竞争格局。',
+   eg:'竞品 A 占 40%，客户占 25%，其他品牌占 35%。',
+   ask:'客户心中排前三的竞品是谁？'},
+  {id:'m3', dim:'met', kind:'leaf', label:'推荐位置', en:'Position', ev:'I',
+   def:'品牌在推荐列表中的平均排位。',
+   how:'排第一和排第五，被选中的概率差别很大。',
+   eg:'平均排在第 2.3 位。',
+   ask:'客户的目标是进入名单，还是排进前两位？'},
+  {id:'m4', dim:'met', kind:'leaf', label:'情感倾向', en:'Sentiment', ev:'I',
+   def:'AI 描述品牌时是正面、中性还是负面。',
+   how:'被提到了，但被说成「贵、排队久」，效果可能适得其反。',
+   eg:'“Great broth, but expect long waits on weekends.”',
+   ask:'客户最担心被 AI 怎么描述？'},
+  {id:'m5', dim:'met', kind:'leaf', label:'引用来源', en:'Citation sources', ev:'I',
+   def:'AI 的回答依据了哪些网页。',
+   how:'它告诉你应该把力气花在哪个平台上。',
+   eg:'60% 的引用来自 Yelp，20% 来自 Reddit。',
+   ask:'客户在这些高频来源上的表现怎么样？'},
+  {id:'m6', dim:'met', kind:'leaf', label:'信息准确度', en:'Accuracy', ev:'F',
+   def:'AI 说的营业时间、地址、价格和菜品是否正确。',
+   how:'错误信息会直接造成到店失败和差评。',
+   eg:'AI 说「周一不营业」，其实门店周一照常营业。',
+   ask:'客户遇到过顾客因为错误信息白跑一趟的情况吗？'},
+
+  {id:'h_risk', dim:'risk', kind:'hub', label:'出海风险与趋势', en:'Risks & trends', ev:'F',
+   def:'中国餐饮品牌在纽约会遇到的特有问题，以及正在出现的新趋势。',
+   how:'这一组只保留有公开研究、行业数据或官方公告支持的判断，每个节点的详情里都列出了依据。风险主要削弱「能被找到」和「能被读懂」两道门槛。'},
+  {id:'r1', dim:'risk', kind:'leaf', label:'实体混淆', en:'Entity confusion', ev:'I',
+   def:'中文名、拼音和英文名混用，或者和名字相近的店铺混在一起。',
+   how:'行业普遍认为，各平台信息一致能帮 AI 把它们认成同一个商家。已有案例显示，Google AI Overview 把一家同名店铺的信息套到另一家餐厅上，凭空给出了停业日期。目前还没有独立研究量化这个影响。',
+   eg:'同一家店在 Yelp 用拼音名，在 Google 用英文名，AI 可能当成两家店。',
+   ask:'客户有统一的英文品牌名规范吗？',
+   src:[['Relevant Audience：AI Overview 编造餐厅停业日期的案例','https://www.relevantaudience.com/seo/ai-overview-invented-restaurant-closing-date/'],['Advice Local：商家信息不一致对 AI 可见度的影响','https://www.advicelocal.com/blog/how-inconsistent-local-citations-damage-ai-visibility/']]},
+  {id:'r2', dim:'risk', kind:'leaf', label:'各 AI 数据源不同', en:'Platform data gaps', ev:'I',
+   def:'不同 AI 读取的本地数据来源不一样。',
+   how:'Google 的 AI 主要依赖自家商家资料；行业分析认为 ChatGPT 更多依赖 Bing、Foursquare 和 Tripadvisor。出海团队往往只维护 Google，ChatGPT 里的门店信息就可能是旧的或缺失的。',
+   eg:'Google 上的营业时间已更新，ChatGPT 引用的 Tripadvisor 页面还是旧的。',
+   ask:'客户的门店信息，除了 Google 还在哪些平台上维护？',
+   src:[['Qvery：Tripadvisor 在 ChatGPT 与 AI Mode 中的引用对比','https://qvery.ai/blog/tripadvisor-ai-citations-statistics/'],['Local Falcon：ChatGPT 本地搜索的数据来源','https://www.localfalcon.com/blog/chatgpt-local-search-data-sources-where-does-business-info-come-from']]},
+  {id:'r3', dim:'risk', kind:'leaf', label:'语言偏好错位', en:'Language mismatch', ev:'A',
+   def:'AI 倾向引用和提问语言相同的来源。',
+   how:'NAACL 2025 的研究发现，多语言大模型在检索和生成时都偏向与提问同语言的信息；另一项研究发现，英文提问时模型更常引用英文来源，有时甚至牺牲相关性。这意味着品牌在中文平台积累的口碑，很难进入美国食客的英文回答；国内的中文舆情则更可能出现在华人用中文提问的回答里。',
+   eg:'品牌在小红书很火，但美国食客用英文问时，AI 很少引用小红书。',
+   ask:'客户的英文口碑和中文口碑分别积累得怎么样？',
+   src:[['Sharma 等，Faux Polyglot（NAACL 2025）','https://arxiv.org/abs/2407.05502'],['多语言 RAG 的引用语言偏好研究（arXiv 2509.13930）','https://arxiv.org/abs/2509.13930']]},
+  {id:'r4', dim:'risk', kind:'leaf', label:'AI 代订座', en:'Agentic booking', ev:'O',
+   def:'AI 不只做推荐，还会直接帮用户订位和下单。',
+   how:'门店数据能不能被 AI 调用，会成为新的入口。Google 在 2025 年 8 月推出 AI Mode 代订餐厅，之后扩展到更多国家。',
+   eg:'“Book a table for 6 at 7pm.” 由 AI 直接完成。',
+   ask:'客户的订座系统能被 Google 直接调用吗？',
+   src:[['SiliconANGLE：Google AI Mode 推出代订餐厅','https://siliconangle.com/2025/08/21/google-opens-ai-mode-globally-personalized-agentic-capabilities/']]}
+];
+
+const TAGS = {
+  w1:'先问 AI，再决定去哪吃', w2:'AI 只推荐 3 到 5 家', w3:'提问都带场景、地点、价位', w4:'营业时间和菜单经常变', w5:'本地食客和华人用不同平台',
+  e1:'用一句话说出完整需求', e2:'拆成菜系、地点、人数、预算', e3:'本地和时效问题会联网', e4:'一个问题变成多个搜索词', e5:'拿到一批候选网页',
+  e6:'挑出评分、价格这些事实', e7:'多方一致认可的才留下', e8:'写出推荐、理由和引用', e9:'点链接、导航或直接订位', e10:'不联网时靠训练时的印象',
+  g1:'候选网页里有你', g2:'AI 能提取出你的信息', g3:'多个独立来源认可你',
+  l1:'全网同一个名字和地址', l2:'菜单、价格写成文字', l3:'媒体、榜单和真实评价', l4:'各平台的门店资料', l5:'允许 AI 爬虫抓取', l6:'定期测试，发现问题就修',
+  s1:'品牌自己可控的事实来源', s2:'Google AI 最依赖的来源', s3:'Apple、Bing、Foursquare', s4:'AI 引用最多的点评站', s5:'ChatGPT 常引用，游客常用',
+  s6:'真实食客的讨论', s7:'Eater、Infatuation、米其林', s8:'可订时段和菜单数据', s9:'带动评价和讨论', s10:'影响中文提问的回答',
+  m1:'多少问题里提到了你', m2:'和竞品比占多少', m3:'平均排在第几', m4:'说你好还是不好', m5:'AI 依据了哪些网页', m6:'AI 说的对不对',
+  r1:'名字混用，被当成几家店', r2:'只维护 Google 不够', r3:'中文口碑难进英文回答', r4:'AI 直接帮用户订位'
+};
+NODES.forEach(n => { n.tag = TAGS[n.id]; });
+
+const EDGE_LIST = [
+  // flow through the engine
+  ['e1','e2','flow'],['e2','e3','flow'],['e3','e4','flow'],['e4','e5','flow'],['e5','e6','flow'],
+  ['e6','e7','flow'],['e7','e8','flow'],['e8','e9','flow'],['e3','e10','flow'],['e10','e8','flow'],
+  // gates guard steps
+  ['g1','e5','gate'],['g2','e6','gate'],['g3','e7','gate'],
+  // A + B -> gate
+  ['l5','g1','merge'],['l4','g1','merge'],['l1','g2','merge'],['l2','g2','merge'],['l3','g3','merge'],['l1','g3','merge'],
+  // sources feed retrieval
+  ['s1','e5','feed'],['s2','e5','feed'],['s3','e5','feed'],['s4','e5','feed'],['s5','e5','feed'],['s6','e5','feed'],['s7','e5','feed'],['s8','e5','feed'],['s9','e5','feed'],['s10','e5','feed'],
+  ['l3','e10','memory'],
+  // answer measured
+  ['e8','m1','measure'],['e8','m2','measure'],['e8','m3','measure'],['e8','m4','measure'],['e8','m5','measure'],['e8','m6','measure'],
+  // metrics feed back
+  ['m1','l6','loop'],['m2','l6','loop'],['m3','l6','loop'],['m4','l6','loop'],['m5','l6','loop'],['m6','l6','loop'],
+  // risks weaken
+  ['r1','g2','risk'],['r2','g1','risk'],['r3','g1','risk'],['r4','e9','risk'],
+  // levers act on platforms
+  ['l2','s1','acts'],['l4','s2','acts'],['l4','s3','acts'],['l4','s8','acts'],['l3','s4','acts'],['l3','s5','acts'],['l3','s6','acts'],['l3','s7','acts'],['l3','s9','acts'],['l3','s10','acts'],
+  // context
+  ['w1','e1','relate'],['w2','e8','relate'],['w3','e1','relate'],['w4','m6','relate'],['w5','s10','relate'],['w5','r3','relate']
+];
+const REL = {
+  tree:['包含','属于'], flow:['下一步','上一步'], gate:['把关','由它把关'], merge:['共同决定','决定因素'],
+  feed:['提供信息给','信息来源'], measure:['被衡量为','衡量对象'], loop:['反馈到','依据'],
+  risk:['削弱','风险因素'], acts:['作用于','受影响于'], relate:['相关','相关'], memory:['长期沉淀为','长期来源']
+};
+const VIS = { struct:new Set(['tree']), causal:new Set(['flow','gate','merge','feed','measure','risk']) };
+const ARROW = new Set(['flow','gate','merge','feed','measure','risk','loop','acts','relate','memory']);
+const DASH = new Set(['measure','risk','loop','relate','memory']);
+
+const CAUSAL = {
+  geo:{x:800,y:40,a:'hidden'},
+  h_why:{x:110,y:124,a:'caption'}, w1:{x:290,y:120,a:'start'}, w2:{x:490,y:120,a:'start'}, w3:{x:690,y:120,a:'start'}, w4:{x:890,y:120,a:'start'}, w5:{x:1090,y:120,a:'start'},
+  h_eng:{x:110,y:452,a:'caption'},
+  e1:{x:150,y:520,a:'below'}, e2:{x:315,y:520,a:'below'}, e3:{x:480,y:520,a:'below'}, e4:{x:645,y:520,a:'below'}, e5:{x:810,y:520,a:'below'},
+  e6:{x:975,y:520,a:'below'}, e7:{x:1140,y:520,a:'below'}, e8:{x:1305,y:520,a:'below'}, e9:{x:1470,y:520,a:'below'}, e10:{x:892,y:398,a:'start'},
+  h_met:{x:1270,y:205,a:'caption'}, m1:{x:1280,y:245,a:'start'}, m2:{x:1420,y:245,a:'start'}, m3:{x:1280,y:295,a:'start'}, m4:{x:1420,y:295,a:'start'}, m5:{x:1280,y:345,a:'start'}, m6:{x:1420,y:345,a:'start'},
+  h_gate:{x:782,y:655,a:'caption-end'}, g1:{x:810,y:650,a:'below'}, g2:{x:975,y:650,a:'below'}, g3:{x:1140,y:650,a:'below'},
+  h_lev:{x:600,y:805,a:'caption-end'}, l5:{x:650,y:800,a:'below'}, l4:{x:770,y:800,a:'below'}, l2:{x:890,y:800,a:'below'}, l1:{x:1010,y:800,a:'below'}, l3:{x:1130,y:800,a:'below'}, l6:{x:1290,y:800,a:'below'},
+  h_src:{x:110,y:655,a:'caption'}, s1:{x:130,y:700,a:'start'}, s2:{x:130,y:750,a:'start'}, s3:{x:130,y:800,a:'start'}, s4:{x:130,y:850,a:'start'}, s5:{x:130,y:900,a:'start'},
+  s6:{x:330,y:700,a:'start'}, s9:{x:330,y:750,a:'start'}, s7:{x:330,y:800,a:'start'}, s8:{x:330,y:850,a:'start'}, s10:{x:330,y:900,a:'start'},
+  h_risk:{x:1430,y:592,a:'caption'}, r4:{x:1440,y:630,a:'start'}, r1:{x:1440,y:690,a:'start'}, r2:{x:1440,y:750,a:'start'}, r3:{x:1440,y:810,a:'start'}
+};
+
+/* The worked example. All shops and numbers are invented to show the mechanism. */
+const cxBox = (label, note, body) => `<div class="cx"><div class="cx-label">${label}<span>${note}</span></div>${body}</div>`;
+const srcRows = items => `<ul class="rows">${items.map(([src, t, d, cls], i) => `<li style="--i:${i}"${cls ? ` class="${cls}"` : ''}><span class="src">${src}</span><div>${t}<small>${d}</small></div></li>`).join('')}</ul>`;
+const tbl = (head, rows, cls = '') => `<div class="cx-scroll"><table class="cx-t ${cls}"><thead><tr>${head.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(([rc, ...cells], i) => `<tr class="${rc}" style="--i:${i}">${cells.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+const callout = (t, b) => `<div class="callout"><b>${t}</b>${b}</div>`;
+const FAKE = '<p class="cx-note">店名和数字为虚构，用来说明机制。</p>';
+const MAG = '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5"></circle><path d="M11 11l3.5 3.5"></path></svg>';
+
+const CH = [
+  {part:'case', step:'e1', t:'用户提问', act:'type',
+   b:'一位游客在 ChatGPT 里输入了这句话。它带着菜系、地点、人数和预算，是一句完整的话。餐饮类的提问大多是这样。',
+   add:['h_eng','e1'], focus:['e1','e2','e3'],
+   cx:cxBox('用户输入', 'ChatGPT', `<div class="cx-chat"><div class="bubble"><span data-type>${Q}</span><span class="caret"></span></div><p class="cx-zh">曼哈顿适合 6 个人聚餐、人均 50 美元左右的川味火锅，哪家最好？</p></div>`)},
+  {part:'case', step:'e2', t:'理解需求',
+   b:'AI 先把这句话拆成几个具体条件。后面找到的每一家店，都要拿来和这些条件核对。',
+   add:['e2'], focus:['e1','e2','e3'],
+   cx:cxBox('AI 拆出的条件', '示例', '<dl class="kv"><dt>菜系</dt><dd>川味火锅</dd><dt>地点</dt><dd>曼哈顿</dd><dt>人数</dt><dd>6 人</dd><dt>预算</dt><dd>人均约 $50</dd><dt>想要</dt><dd>一份推荐名单</dd></dl>')},
+  {part:'case', step:'e3', t:'判断是否联网',
+   b:'AI 有两种回答方式：靠训练时形成的记忆，或者联网去查。哪家店好、人均多少，这些信息一直在变，所以这类问题通常会联网。对品牌来说，这意味着现在做的改动，几天到几周就可能反映在答案里。',
+   add:['e3','e10'], focus:['e2','e3','e4','e10'],
+   cx:cxBox('两种回答方式', '示例', srcRows([
+     ['靠记忆', '不常变的知识', '例如 “What is hot pot?”', 'dim'],
+     ['联网搜索', '本地、价格、最新信息', '本例走这条路：哪家好、多少钱、能坐几个人', 'pick']]))},
+  {part:'case', step:'e4', t:'扩展搜索词',
+   b:'AI 不会原样去搜这句话。它会把问题改写成好几个搜索词，同时去查。Google 把这个做法叫 query fan-out。品牌要覆盖的是这一组搜索词。',
+   add:['e4'], focus:['e3','e4','e5'],
+   cx:cxBox('AI 自己生成的搜索词', '示例', `<ul class="rows queries">${['best sichuan hot pot manhattan', 'hot pot manhattan large group', 'hot pot nyc price per person', 'best hot pot nyc reddit', 'sichuan hot pot midtown reservations'].map((q, i) => `<li style="--i:${i}">${MAG}${q}</li>`).join('')}</ul><p class="cx-note">搜索词由 AI 生成，每次可能不同。</p>`)},
+  {part:'case', step:'e5', t:'检索网页',
+   b:'搜索带回一批网页，来自不同类型的平台。出现在这些网页里的火锅店，组成了候选池。左边的图上可以看到，各类信息来源都汇入这一步。',
+   add:['e5','h_src','s1','s2','s3','s4','s5','s6','s7','s8','s9','s10','h_gate','g1'], focus:['e4','e5','e6','g1','s1','s5','s6','s10'],
+   cx:cxBox('这次搜到了什么', '示例', srcRows([
+     ['Google 商家资料', '6 家火锅店的资料卡', '评分从 4.2 到 4.8，带营业时间和价位'],
+     ['Yelp', '曼哈顿火锅列表页', '5 家有评分和评价'],
+     ['Reddit', 'r/FoodNYC 讨论帖', '“Best hot pot for groups?” 86 条回复'],
+     ['媒体榜单', 'Eater NY 火锅榜单', '收录了其中 2 家'],
+     ['Tripadvisor', '火锅店点评页', '4 家有游客点评'],
+     ['品牌官网', '菜单和门店页', '3 家能读到文字版菜单和人均'],
+     ['小红书', '「曼哈顿火锅合集」笔记', '英文提问时较少被引用，AI 偏好同语言的来源', 'dim']]) +
+     '<div class="pool">候选池<b>A 店</b><b class="you">你的品牌</b><b>B 店</b><b>C 店</b><b>D 店</b><b>E 店</b></div>' + FAKE) +
+     callout('门槛 1：能被找到', '你的品牌出现在 Google、Yelp、Reddit、榜单和官网的结果里，进入了候选池。没被搜到的店，到这一步就出局了。')},
+  {part:'case', step:'e6', t:'提取关键信息',
+   b:'AI 不会通读每个网页，只挑和条件有关的事实：评分、人均、能不能坐 6 个人。写成文字的信息才提取得到。',
+   add:['e6','g2'], focus:['e5','e6','e7','g2'],
+   cx:cxBox('AI 从网页里提取到的', '示例', tbl(['火锅店', 'Google 评分', '人均', '6 人桌'], [
+     ['you', '你的品牌', '4.6 <small>1,240 条</small>', '$45', '有，8 人桌'],
+     ['', 'A 店', '4.7 <small>2,310 条</small>', '$55', '有，包间'],
+     ['', 'B 店', '4.5 <small>1,870 条</small>', '$42', '有'],
+     ['', 'C 店', '4.4 <small>940 条</small>', '$60', '有'],
+     ['', 'D 店', '4.8 <small>86 条</small>', '$48', '<span class="miss">没提取到</span>'],
+     ['', 'E 店', '4.2 <small>1,560 条</small>', '$38', '有']]) + FAKE) +
+     callout('门槛 2：能被读懂', '你的品牌把人均和桌型写成了文字，AI 提取到了。D 店的菜单只有图片，这一栏就是空的。')},
+  {part:'case', step:'e7', t:'多源比对',
+   b:'AI 把各个来源的说法放在一起比较，再对照预算和人数，从 6 家里留下 3 家。',
+   add:['e7','g3'], focus:['e6','e7','e8','g3'],
+   cx:cxBox('6 家候选，留下 3 家', '示例', tbl(['火锅店', 'Google', 'Yelp', 'Reddit', '榜单', '结果'], [
+     ['', 'A 店', '4.7', '4.5', '好评', '入选', '<span class="yes">留下</span>'],
+     ['you', '你的品牌', '4.6', '4.4', '好评', '入选', '<span class="yes">留下</span>'],
+     ['', 'B 店', '4.5', '4.3', '好评', '无', '<span class="yes">留下</span>'],
+     ['out', 'C 店', '4.4', '4.0', '两极', '无', '<span class="no">超预算</span>'],
+     ['out', 'D 店', '4.8', '无', '无', '无', '<span class="no">来源太少</span>'],
+     ['out', 'E 店', '4.2', '3.8', '差评多', '无', '<span class="no">口碑差</span>']]) +
+     '<p class="cx-note">AI 内部并没有这样一张表。这里把它的倾向画出来，方便理解。店名和数字为虚构。</p>') +
+     callout('门槛 3：值得信任', 'D 店的 Google 评分最高，却因为只有一个来源、评价又少被排除。AI 更看重多个来源说法一致。')},
+  {part:'case', step:'e8', t:'生成回答',
+   b:'AI 把留下的 3 家写成一段回答，每家配一句理由和来源链接。用户看到的只有这一段。',
+   add:['e8'], focus:['e7','e8','e9','e10'],
+   cx:cxBox('AI 的回答', '示例', `<div class="answer"><ol class="ans-list">
+     <li><b>Restaurant A</b> (East Village): private room for groups, about $55 per person.<span class="ans-src">来源：Google、Eater NY</span></li>
+     <li class="you"><b>你的品牌</b> (Midtown): tables for up to 8, about $45 per person, known for its beef-tallow mala broth.<span class="ans-src">来源：Yelp、Eater NY、Reddit</span></li>
+     <li><b>Restaurant B</b> (Chinatown): best value at about $42 per person, open late.<span class="ans-src">来源：Google、Reddit</span></li></ol></div>` + FAKE) +
+     callout('GEO 量的就是这段话', '有没有被提到、排在第几、怎么描述、引用了哪些来源，后面的六个指标都从这里来。')},
+  {part:'case', step:'e9', t:'用户行动',
+   b:'看完回答，用户可能点开来源、去地图导航，或者让 AI 直接订位。从回答到成交的距离越来越短。',
+   add:['e9'], focus:['e7','e8','e9'],
+   cx:cxBox('用户接下来会做什么', '示例', srcRows([
+     ['点开来源', '查看 Yelp 页面或品牌官网', '确认菜单、照片和评价'],
+     ['去地图导航', '在地图里查路线和营业时间', '门店资料不准，这一步就会流失'],
+     ['让 AI 订位', '“Book a table for 6 at 7pm.”', 'Google AI Mode 已经可以代订餐厅', 'pick']]))},
+  {part:'method', t:'品牌能做什么',
+   b:'回头看，这家店能上榜，是因为过了三道门槛。每道门槛背后各有两个可以动手的发力点。品牌改不了 AI，只能改 AI 读到的材料。',
+   add:['h_lev','l1','l2','l3','l4','l5','l6'], hl:['g1','g2','g3','e5','e6','e7'], focus:['l1','l2','l3','l4','l5','l6','g1','g2','g3','e5','e6','e7','e10'],
+   cx:cxBox('门槛背后的发力点', '对应案例', tbl(['门槛', '发力点', '这家店做了什么'], [
+     ['', '能被找到', '技术可访问<br>本地数据', '允许 AI 爬虫抓取官网；认领了 Google、Yelp、Bing 的门店资料'],
+     ['', '能被读懂', '实体统一<br>结构化内容', '各平台用同一个英文名；菜单和人均写成文字'],
+     ['', '值得信任', '第三方口碑<br>实体统一', '进入了 Eater 榜单；Yelp 和 Reddit 上有真实好评']], 'wrap'))},
+  {part:'method', t:'衡量与闭环', act:'loop',
+   b:'同一个问题问两次，答案可能不同。所以不能只看一次结果，要拿一组问题反复问，再做统计。指标会告诉你问题出在哪一关，然后回到发力点去修。',
+   add:['h_met','m1','m2','m3','m4','m5','m6'], hl:['e8','l6'], focus:['m1','m2','m5','m6','e7','e8','e9','l6'],
+   cx:cxBox('一次监测的结果', '示例', `<div class="meter">
+     <span>提及率</span><i><b style="width:34%"></b></i><strong>34%</strong>
+     <span>声量份额</span><i><b style="width:25%"></b></i><strong>25%</strong>
+     <span>正面描述</span><i><b style="width:78%"></b></i><strong>78%</strong></div>
+     <dl class="kv"><dt>平均位置</dt><dd>第 2.3 位</dd><dt>引用最多</dt><dd>Yelp</dd><dt>信息错误</dt><dd>4 处，主要是营业时间</dd></dl>
+     <p class="cx-note">做法：50 个类似的问题，在 4 个 AI 上各问 3 次，共 600 条回答。数字为虚构。</p>`)},
+  {part:'method', t:'出海特有的风险', act:'risk',
+   b:'中国品牌在纽约还有几个特有的问题，每一条都有公开研究、行业数据或官方公告支持。',
+   add:['h_risk','r1','r2','r3','r4'], hl:['g1','g2','e9'], focus:['r1','r2','r3','r4','g1','g2','e8','e9'],
+   cx:cxBox('三个风险，一个趋势', '依据见各节点', srcRows([
+     ['实体混淆', '中文名、拼音、英文名混用', 'AI 可能把它们当成几家不同的店'],
+     ['数据源不同', '只维护 Google 不够', 'ChatGPT 更多依赖 Bing、Foursquare 和 Tripadvisor'],
+     ['语言偏好', '中文口碑很难进入英文回答', 'AI 偏好和提问同语言的来源'],
+     ['AI 代订座', '正在出现的新入口', 'AI 直接帮用户订位，门店数据要能被调用', 'pick']]))},
+  {part:'all', t:'全貌', last:true,
+   b:'这就是 GEO 的完整结构。最上面一行是为什么要关心它，中间是 AI 处理问题的 9 步，下面是信息来源、三道门槛和品牌发力点，右边是指标和风险。',
+   add:[], focus:'all',
+   cx:'<div class="cx"><div class="cx-label">接下来可以<span></span></div><ol class="next-list"><li>点任意节点，看定义、纽约餐饮的例子、可以问客户的问题和依据。</li><li>切换「结构」和「因果」两种视图，同一批节点会换一种排法。</li><li>打开门槛模拟器，关掉一道门槛，给客户演示品牌在哪一步被淘汰。</li></ol></div>'}
+];
+
+/* ---------------- state & dom ---------------- */
+const svg = $('#map'), world = $('#world'), edgesLayer = $('#edges'), nodesLayer = $('#nodes'), fx = $('#fx');
+const stage = $('#stage'), drawer = $('#drawer'), tip = $('#tip');
+const primer = $('#primer'), guide = $('#guide'), sim = $('#sim'), particle = $('#particle'), zonesLayer = $('#zones');
+const state = { view:'struct', layoutName:'struct', mode:'explore', hover:null, selected:null, filter:null, chapter:0 };
+const nodeById = {}; NODES.forEach(n => nodeById[n.id] = n);
+const pos = {};
+let curLayout = null, morphing = false;
+const cam = { x:0, y:0, k:1 };
+
+const el = (tag, attrs = {}, parent) => {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+};
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const easeInOut = t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2;
+const easeOut = t => 1 - Math.pow(1 - t, 3);
+const sleep = ms => new Promise(r => setTimeout(r, RM ? 0 : ms));
+const isNarrow = () => window.innerWidth < 760;
+
+function tween(dur, fn, ease = easeInOut) {
+  let raf, start = null;
+  const p = new Promise(res => {
+    if (RM || dur <= 0) { fn(1); res(); return; }
+    const step = ts => {
+      if (start === null) start = ts;
+      const t = Math.min(1, (ts - start) / dur);
+      fn(ease(t));
+      if (t < 1) raf = requestAnimationFrame(step); else res();
+    };
+    raf = requestAnimationFrame(step);
+  });
+  p.cancel = () => cancelAnimationFrame(raf);
+  return p;
+}
+
+const hubOf = d => NODES.find(n => n.kind === 'hub' && n.dim === d);
+const kidsOf = d => NODES.filter(n => n.dim === d && n.kind !== 'hub');
+
+/* ---------------- build ---------------- */
+function glyph(ev, p, r = 4.5) {
+  if (ev === 'A') el('circle', {class:'g-fill', r}, p);
+  else if (ev === 'O') { el('circle', {class:'g-ring', r}, p); el('circle', {class:'g-fill', r:1.9}, p); }
+  else if (ev === 'I') { el('circle', {class:'g-ring', r}, p); el('path', {class:'g-fill', d:`M0,${-r} A${r},${r} 0 0 0 0,${r} Z`}, p); }
+  else el('circle', {class:'g-ring', r}, p);
+}
+function glyphSvg(ev) {
+  const s = el('svg', {width:12, height:12, viewBox:'-6 -6 12 12', 'aria-hidden':'true'});
+  glyph(ev, s);
+  return s.outerHTML;
+}
+
+NODES.forEach(n => {
+  const g = el('g', {class:`node k-${n.kind}`, 'data-id':n.id, tabindex:'0', role:'button', 'aria-label':`${n.label}，${n.en}`}, nodesLayer);
+  const inner = el('g', {class:'inner'}, g);
+  n.hit = el('rect', {class:'hit', x:0, y:0, width:0, height:0, rx:6}, inner);
+  if (n.kind === 'center') {
+    el('circle', {class:'c-orbit', r:62}, inner);
+    el('circle', {class:'c-disc', r:46}, inner);
+    el('text', {class:'c-title', 'text-anchor':'middle', y:4}, inner).textContent = 'GEO';
+    el('text', {class:'c-sub', 'text-anchor':'middle', y:22}, inner).textContent = '生成式引擎优化';
+    n.hit.setAttribute('x', -62); n.hit.setAttribute('y', -62); n.hit.setAttribute('width', 124); n.hit.setAttribute('height', 124); n.hit.setAttribute('rx', 62);
+  } else if (n.kind === 'hub') {
+    n.pill = el('rect', {class:'pill', x:-55, y:-15, width:110, height:30, rx:15}, inner);
+    n.textEl = el('text', {class:'lbl', 'text-anchor':'middle', y:4.5}, inner);
+    n.textEl.textContent = n.label;
+    n.w = 110;
+  } else {
+    const gl = el('g', {class:'glyph'}, inner);
+    if (n.kind === 'gate') {
+      el('rect', {class:'gate-bg', x:-11, y:-11, width:22, height:22, rx:6}, gl);
+      el('path', {class:'gate-mark', d:'M-5,6 V-2.5 Q-5,-6 -1.5,-6 H1.5 Q5,-6 5,-2.5 V6'}, gl);
+    } else if (n.kind === 'step') {
+      el('circle', {class:'st-disc', r:12}, gl);
+      el('text', {class:'st-num', 'text-anchor':'middle', y:3.8}, gl).textContent = n.num;
+    } else glyph(n.ev, gl);
+    n.textEl = el('text', {class:'lbl'}, inner);
+    n.textEl.textContent = n.label;
+    if (n.tag) { n.subEl = el('text', {class:'sub', y:4}, inner); n.subEl.textContent = n.tag; }
+  }
+  n.g = g; n.inner = inner;
+
+  g.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') { state.hover = n.id; refreshLit(); showTip(n, e); } });
+  g.addEventListener('pointermove', e => { if (e.pointerType === 'mouse') moveTip(e); });
+  g.addEventListener('pointerleave', () => { if (state.hover === n.id) { state.hover = null; refreshLit(); } hideTip(); });
+  g.addEventListener('click', e => { e.stopPropagation(); hideTip(); select(n.id); });
+  g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(n.id); } });
+});
+
+const EDGES = EDGE_LIST.map(([a, b, type]) => ({a, b, type}));
+NODES.forEach(n => { if (n.kind === 'hub') EDGES.push({a:'geo', b:n.id, type:'tree'}); });
+NODES.forEach(n => { if (n.kind !== 'hub' && n.kind !== 'center') EDGES.push({a:hubOf(n.dim).id, b:n.id, type:'tree'}); });
+const adj = {}; NODES.forEach(n => adj[n.id] = []);
+EDGES.forEach(e => {
+  e.arrow = ARROW.has(e.type);
+  e.el = el('path', {class:`edge t-${e.type}${DASH.has(e.type) ? ' dash' : ''}${e.arrow ? ' arrow' : ''}`}, edgesLayer);
+  adj[e.a].push({o:e.b, e, out:true});
+  adj[e.b].push({o:e.a, e, out:false});
+});
+
+// soft panels behind each group in the causal view
+const ZONES = [
+  {dim:'why', x:92, y:94, w:1170, h:54}, {dim:'eng', x:92, y:430, w:1456, h:136}, {dim:'met', x:1252, y:184, w:284, h:188},
+  {dim:'src', x:92, y:634, w:404, h:294}, {dim:'gate', x:716, y:622, w:478, h:76}, {dim:'lev', x:520, y:772, w:824, h:78},
+  {dim:'risk', x:1412, y:574, w:180, h:262}
+];
+ZONES.forEach(z => { z.el = el('rect', {class:`zone z-${z.dim}`, x:z.x, y:z.y, width:z.w, height:z.h, rx:16}, zonesLayer); });
+function updateZones(shown) {
+  ZONES.forEach(z => z.el.classList.toggle('vis', state.layoutName === 'causal' && (!shown || shown.has(hubOf(z.dim).id))));
+}
+
+/* ---------------- layouts ---------------- */
+function layoutStruct() {
+  const L = { geo:{x:800, y:500, a:'center'} };
+  const side = (dims, dir) => {
+    const STEP = 32, GAP = 30, rows = [];
+    let y = 0;
+    dims.forEach((d, i) => {
+      if (i) y += GAP;
+      const ys = [];
+      kidsOf(d).forEach(k => { rows.push([k.id, y]); ys.push(y); y += STEP; });
+      L[hubOf(d).id] = {x:800 + dir * 215, y:(ys[0] + ys[ys.length - 1]) / 2, a:'pill'};
+    });
+    const off = 500 - (y - STEP) / 2;
+    rows.forEach(([id, yy]) => L[id] = {x:800 + dir * 420, y:yy + off, a:dir < 0 ? 'end' : 'start'});
+    dims.forEach(d => L[hubOf(d).id].y += off);
+  };
+  side(['why','src','gate','risk'], -1);
+  side(['eng','lev','met'], 1);
+  return L;
+}
+function layoutTree() {
+  const L = { geo:{x:70, y:60, a:'center'} };
+  let y = 156;
+  ['why','eng','src','gate','lev','met','risk'].forEach(d => {
+    const h = hubOf(d);
+    L[h.id] = {x:64 + h.w / 2, y, a:'pill'};
+    y += 44;
+    kidsOf(d).forEach(k => { L[k.id] = {x:104, y, a:'start'}; y += 34; });
+    y += 22;
+  });
+  return L;
+}
+function layoutFor(view) {
+  if (view === 'causal') { state.layoutName = 'causal'; return CAUSAL; }
+  if (isNarrow()) { state.layoutName = 'tree'; return layoutTree(); }
+  state.layoutName = 'struct'; return layoutStruct();
+}
+
+const OFF = n => n.kind === 'step' ? 20 : n.kind === 'gate' ? 19 : 13;
+function placeLabel(n, a) {
+  n.g.classList.toggle('as-caption', a === 'caption' || a === 'caption-end');
+  n.g.classList.toggle('is-off', a === 'hidden');
+  if (!n.textEl) return;
+  let x = 0, y = 4.5, anchor = 'middle';
+  if (n.kind === 'hub') {
+    if (a === 'caption') anchor = 'start';
+    else if (a === 'caption-end') anchor = 'end';
+  } else if (a === 'start') { x = OFF(n); anchor = 'start'; }
+  else if (a === 'end') { x = -OFF(n); anchor = 'end'; }
+  else if (a === 'below') { y = n.kind === 'leaf' ? 25 : 31; }
+  n.textEl.setAttribute('x', x);
+  n.textEl.setAttribute('y', y);
+  n.textEl.setAttribute('text-anchor', anchor);
+  if (n.subEl) { // the one-line tagline only fits in the wide structure view
+    const show = state.layoutName === 'struct' && (a === 'start' || a === 'end');
+    n.subEl.style.display = show ? '' : 'none';
+    if (show) {
+      const d = OFF(n) + (n.lw || 80) + 10;
+      n.subEl.setAttribute('x', a === 'start' ? d : -d);
+      n.subEl.setAttribute('text-anchor', a === 'start' ? 'start' : 'end');
+    }
+  }
+}
+function measure() {
+  NODES.forEach(n => {
+    if (!n.textEl) return;
+    try { n.lw = n.textEl.getComputedTextLength(); } catch (e) { n.lw = 90; }
+    if (n.subEl) { n.subEl.style.display = ''; try { n.sw = n.subEl.getComputedTextLength(); } catch (e) { n.sw = 130; } }
+    if (n.kind === 'hub') {
+      n.w = Math.ceil(n.lw) + 30;
+      n.pill.setAttribute('x', -n.w / 2);
+      n.pill.setAttribute('width', n.w);
+    }
+  });
+}
+function updateHit(n) {
+  if (n.kind === 'center') return;
+  n.hit.setAttribute('x', 0); n.hit.setAttribute('y', 0); n.hit.setAttribute('width', 0); n.hit.setAttribute('height', 0);
+  let b;
+  try { b = n.inner.getBBox(); } catch (e) { return; }
+  const p = 6;
+  n.hit.setAttribute('x', b.x - p); n.hit.setAttribute('y', b.y - p);
+  n.hit.setAttribute('width', b.width + p * 2); n.hit.setAttribute('height', b.height + p * 2);
+}
+const updateHits = () => NODES.forEach(updateHit);
+
+function setNodePos(id) { nodeById[id].g.setAttribute('transform', `translate(${pos[id].x.toFixed(2)},${pos[id].y.toFixed(2)})`); }
+
+function trimToward(p, c, d) {
+  const vx = c.x - p.x, vy = c.y - p.y, L = Math.hypot(vx, vy) || 1;
+  return {x:p.x + vx / L * d, y:p.y + vy / L * d};
+}
+const RAD = n => n.kind === 'step' ? 15 : n.kind === 'gate' ? 16 : 8;
+function edgeD(e) {
+  const a = pos[e.a], b = pos[e.b];
+  if (e.type === 'tree' && state.layoutName === 'tree' && !morphing) {
+    const pa = nodeById[e.a], pb = nodeById[e.b];
+    const sx = pa.kind === 'center' ? a.x - 24 : a.x - pa.w / 2 + 14;
+    const sy = a.y + (pa.kind === 'center' ? 46 : 15);
+    const ex = pb.kind === 'hub' ? b.x - pb.w / 2 : b.x - (pb.kind === 'leaf' ? 8 : 15);
+    return `M${sx},${sy} V${b.y - 8} Q${sx},${b.y} ${sx + 8},${b.y} H${ex}`;
+  }
+  const dx = b.x - a.x, dy = b.y - a.y;
+  let c1, c2;
+  if (e.type === 'feed' && dy < 0) { c1 = {x:a.x + dx * .45, y:a.y}; c2 = {x:b.x - 60, y:b.y + 70}; }
+  else if (Math.abs(dx) >= Math.abs(dy)) { c1 = {x:a.x + dx * .5, y:a.y}; c2 = {x:b.x - dx * .5, y:b.y}; }
+  else { c1 = {x:a.x, y:a.y + dy * .5}; c2 = {x:b.x, y:b.y - dy * .5}; }
+  let s = a, t = b;
+  if (e.arrow) { s = trimToward(a, c1, RAD(nodeById[e.a])); t = trimToward(b, c2, RAD(nodeById[e.b]) + 2); }
+  return `M${s.x.toFixed(1)},${s.y.toFixed(1)} C${c1.x.toFixed(1)},${c1.y.toFixed(1)} ${c2.x.toFixed(1)},${c2.y.toFixed(1)} ${t.x.toFixed(1)},${t.y.toFixed(1)}`;
+}
+const updateEdges = () => EDGES.forEach(e => e.el.setAttribute('d', edgeD(e)));
+function applyVis() {
+  EDGES.forEach(e => e.el.classList.toggle('vis', VIS[state.view].has(e.type)));
+  svg.classList.toggle('v-causal', state.layoutName === 'causal');
+  updateZones();
+}
+
+function applyLayoutNow(L) {
+  curLayout = L;
+  NODES.forEach(n => { pos[n.id] = {x:L[n.id].x, y:L[n.id].y}; placeLabel(n, L[n.id].a); setNodePos(n.id); });
+  updateEdges(); updateHits();
+}
+
+let morphAnim = null;
+function morphTo(L, dur = 900) {
+  if (morphAnim) morphAnim.cancel();
+  const from = {}; NODES.forEach(n => from[n.id] = {...pos[n.id]});
+  const xs = NODES.map(n => L[n.id].x), minX = Math.min(...xs), span = (Math.max(...xs) - minX) || 1;
+  const STAG = 260, total = dur + STAG;
+  let relabelled = false;
+  morphing = true; curLayout = L;
+  svg.classList.add('moving');
+  return (morphAnim = tween(total, raw => {
+    const T = raw * total;
+    NODES.forEach(n => {
+      const d = (L[n.id].x - minX) / span * STAG;
+      const t = easeInOut(clamp((T - d) / dur, 0, 1));
+      pos[n.id] = {x:lerp(from[n.id].x, L[n.id].x, t), y:lerp(from[n.id].y, L[n.id].y, t)};
+      setNodePos(n.id);
+    });
+    if (!relabelled && raw > .35) { relabelled = true; NODES.forEach(n => placeLabel(n, L[n.id].a)); }
+    updateEdges();
+  }, t => t)).then(() => {
+    morphing = false;
+    NODES.forEach(n => placeLabel(n, L[n.id].a));
+    updateEdges(); updateHits();
+    svg.classList.remove('moving');
+  });
+}
+
+/* ---------------- camera ---------------- */
+function applyCam() {
+  world.setAttribute('transform', `translate(${cam.x.toFixed(2)},${cam.y.toFixed(2)}) scale(${cam.k.toFixed(4)})`);
+  let gs = 28 * cam.k; while (gs < 18) gs *= 2; // the dot grid pans and zooms with the map
+  svg.style.backgroundSize = `${gs.toFixed(2)}px ${gs.toFixed(2)}px`;
+  svg.style.backgroundPosition = `${cam.x.toFixed(1)}px ${cam.y.toFixed(1)}px`;
+}
+let camAnim = null;
+function flyCam(t, dur = 800) {
+  if (camAnim) camAnim.cancel();
+  const f = {...cam};
+  camAnim = tween(dur, p => { cam.x = lerp(f.x, t.x, p); cam.y = lerp(f.y, t.y, p); cam.k = lerp(f.k, t.k, p); applyCam(); });
+  return camAnim;
+}
+function drawerOpen() { return drawer.classList.contains('open'); }
+function insets() {
+  const roomy = state.mode !== 'tour' && !isNarrow(); // keep the legend button and the hover readout clear of the map
+  let l = 28, t = roomy ? 54 : 28, r = 28, b = roomy ? 72 : 28;
+  if (drawerOpen()) { if (isNarrow()) b += drawer.offsetHeight; else r += drawer.offsetWidth + 12; }
+  if (!guide.hidden) { if (isNarrow()) b += guide.offsetHeight; else r += guide.offsetWidth + 12; }
+  if (!sim.hidden) b = Math.max(b, sim.offsetHeight + 44);
+  return {l, t, r, b};
+}
+function bboxOf(ids, L) {
+  const subs = L !== CAUSAL && state.layoutName === 'struct';
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  ids.forEach(id => {
+    const n = nodeById[id], p = L[id];
+    if (!p || p.a === 'hidden') return;
+    const w = (n.lw || 80) + (subs && n.sw ? n.sw + 12 : 0), o = OFF(n) + 2;
+    let a = p.x - 14, b = p.x + 14, c = p.y - 14, d = p.y + 14;
+    if (n.kind === 'center') { a = p.x - 64; b = p.x + 64; c = p.y - 64; d = p.y + 64; }
+    else if (p.a === 'pill') { a = p.x - (n.w || 110) / 2; b = p.x + (n.w || 110) / 2; c = p.y - 16; d = p.y + 16; }
+    else if (p.a === 'start' || p.a === 'caption') b = p.x + o + w;
+    else if (p.a === 'end' || p.a === 'caption-end') a = p.x - o - w;
+    else if (p.a === 'below') { a = p.x - w / 2 - 4; b = p.x + w / 2 + 4; d = p.y + 38; }
+    x0 = Math.min(x0, a); x1 = Math.max(x1, b); y0 = Math.min(y0, c); y1 = Math.max(y1, d);
+  });
+  return {x:x0, y:y0, w:Math.max(1, x1 - x0), h:Math.max(1, y1 - y0)};
+}
+function fitTarget(box, {maxK = 1.3, minK = .12} = {}) {
+  const r = stage.getBoundingClientRect(), ins = insets();
+  const aw = Math.max(80, r.width - ins.l - ins.r), ah = Math.max(80, r.height - ins.t - ins.b);
+  const k = clamp(Math.min(aw / box.w, ah / box.h), minK, maxK);
+  return {k, x:ins.l + (aw - box.w * k) / 2 - box.x * k, y:ins.t + (ah - box.h * k) / 2 - box.y * k};
+}
+const visibleIds = L => NODES.filter(n => L[n.id].a !== 'hidden').map(n => n.id);
+function fitAll(dur = 800, L = curLayout) {
+  const narrowTree = state.layoutName === 'tree';
+  const target = fitTarget(bboxOf(visibleIds(L), L), {maxK: narrowTree ? 1.05 : 1.2});
+  if (narrowTree) { // tall list: fit width, start at the top
+    const r = stage.getBoundingClientRect(), box = bboxOf(visibleIds(L), L);
+    target.k = clamp((r.width - 40) / box.w, .5, 1.05);
+    target.x = 20 - box.x * target.k; target.y = 64 - box.y * target.k;
+  }
+  return flyCam(target, dur);
+}
+function zoomAt(px, py, f, dur = 0) {
+  const k = clamp(cam.k * f, .12, 3.2), wx = (px - cam.x) / cam.k, wy = (py - cam.y) / cam.k;
+  const t = {k, x:px - wx * k, y:py - wy * k};
+  if (dur) flyCam(t, dur); else { if (camAnim) camAnim.cancel(); Object.assign(cam, t); applyCam(); }
+}
+
+/* pan + zoom */
+const pointers = new Map();
+let panMoved = false, pinchD = 0;
+svg.addEventListener('pointerdown', e => {
+  if (e.target.closest('.node')) return;
+  pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  svg.setPointerCapture(e.pointerId);
+  panMoved = false;
+  if (camAnim) camAnim.cancel();
+  if (pointers.size === 2) { const [p, q] = [...pointers.values()]; pinchD = Math.hypot(p.x - q.x, p.y - q.y); }
+});
+svg.addEventListener('pointermove', e => {
+  if (!pointers.has(e.pointerId)) return;
+  const prev = pointers.get(e.pointerId), cur = {x:e.clientX, y:e.clientY};
+  if (pointers.size === 1) {
+    const dx = cur.x - prev.x, dy = cur.y - prev.y;
+    if (Math.abs(dx) + Math.abs(dy) > 0) {
+      if (!panMoved && Math.hypot(dx, dy) < 2) return;
+      panMoved = true; svg.classList.add('panning');
+      cam.x += dx; cam.y += dy; applyCam();
+    }
+    pointers.set(e.pointerId, cur);
+  } else if (pointers.size === 2) {
+    pointers.set(e.pointerId, cur);
+    const [p, q] = [...pointers.values()], d = Math.hypot(p.x - q.x, p.y - q.y);
+    const r = svg.getBoundingClientRect();
+    if (pinchD) zoomAt((p.x + q.x) / 2 - r.left, (p.y + q.y) / 2 - r.top, d / pinchD);
+    pinchD = d; panMoved = true;
+  }
+});
+const endPointer = e => {
+  if (!pointers.has(e.pointerId)) return;
+  pointers.delete(e.pointerId);
+  if (pointers.size < 2) pinchD = 0;
+  if (!pointers.size) {
+    svg.classList.remove('panning');
+    if (!panMoved && e.type === 'pointerup' && state.mode === 'explore' && state.selected) closeDrawer(true);
+  }
+};
+svg.addEventListener('pointerup', endPointer);
+svg.addEventListener('pointercancel', endPointer);
+svg.addEventListener('wheel', e => {
+  e.preventDefault();
+  const r = svg.getBoundingClientRect();
+  const f = Math.exp(-e.deltaY * (e.ctrlKey ? .01 : .0016));
+  zoomAt(e.clientX - r.left, e.clientY - r.top, f);
+}, {passive:false});
+$('#zIn').onclick = () => { const r = svg.getBoundingClientRect(); zoomAt(r.width / 2, r.height / 2, 1.3, 300); };
+$('#zOut').onclick = () => { const r = svg.getBoundingClientRect(); zoomAt(r.width / 2, r.height / 2, 1 / 1.3, 300); };
+$('#zFit').onclick = () => fitAll(700);
+
+/* ---------------- highlight ---------------- */
+function refreshLit() {
+  if (state.mode === 'tour') return;
+  const f = state.hover || state.selected;
+  svg.classList.toggle('dimming', !!f);
+  NODES.forEach(n => n.g.classList.remove('lit', 'focus'));
+  EDGES.forEach(e => e.el.classList.remove('lit'));
+  if (!f) return;
+  nodeById[f].g.classList.add('lit', 'focus');
+  adj[f].forEach(({o, e}) => {
+    if (curLayout[o].a === 'hidden') return;
+    nodeById[o].g.classList.add('lit');
+    if (!(e.type === 'tree' && state.view === 'causal')) e.el.classList.add('lit');
+  });
+}
+function applyFilter() {
+  NODES.forEach(n => n.g.classList.toggle('filtered', !!state.filter && (n.kind === 'leaf' || n.kind === 'step' || n.kind === 'gate') && n.ev !== state.filter));
+  $('#legend').classList.toggle('filtering', !!state.filter);
+  document.querySelectorAll('.lg-row[data-ev]').forEach(b => b.classList.toggle('on', b.dataset.ev === state.filter));
+}
+
+/* ---------------- tooltip ---------------- */
+function showTip(n) {
+  if (state.mode === 'tour' || !sim.hidden) return;
+  const links = adj[n.id].filter(({o, e}) => curLayout[o].a !== 'hidden' && !(e.type === 'tree' && state.view === 'causal')).length;
+  tip.innerHTML = `<b>${n.num ? n.num + ' ' : ''}${n.label}</b>${n.def}<span class="t-meta">已高亮 ${links} 个关联节点，点击看详情</span>`;
+  // centre in the part of the stage the drawer leaves free
+  const free = stage.getBoundingClientRect().width - (drawerOpen() && !isNarrow() ? drawer.offsetWidth + 12 : 0);
+  tip.style.left = (free / 2) + 'px';
+  tip.style.maxWidth = Math.min(780, free - 140) + 'px';
+  tip.classList.add('show');
+}
+function moveTip() {}
+const hideTip = () => tip.classList.remove('show');
+
+/* ---------------- drawer ---------------- */
+function renderDrawer(n) {
+  const dim = (n.kind === 'center' ? '核心概念' : DIMS[n.dim].name) + (n.grp ? ` · ${n.grp}` : '');
+  let h = `<div class="d-top"><span class="d-eyebrow">${dim}</span><button type="button" class="icon-btn" data-close aria-label="关闭">×</button></div><div class="d-body">`;
+  h += `<h2 class="d-title">${n.num ? `<span class="d-num">${n.num}</span>` : ''}${n.label}</h2><div class="d-en">${n.en}</div>`;
+  if (n.term) h += `<p class="d-term">术语：${n.term}</p>`;
+  if (n.kind !== 'hub') h += `<div class="d-ev">${glyphSvg(n.ev)}<span><b>证据等级：${EV[n.ev].name}</b>　${EV[n.ev].desc}</span></div>`;
+  h += `<div class="d-sec"><h3>是什么</h3><p>${n.def}</p></div>`;
+  h += `<div class="d-sec"><h3>怎么起作用</h3><p>${n.how}</p></div>`;
+  if (n.eg) h += `<div class="d-sec eg"><h3>纽约餐饮例子</h3><p>${n.eg}</p></div>`;
+  if (n.ask) h += `<div class="d-sec ask"><h3>可以问客户</h3><p>${n.ask}</p></div>`;
+  if (n.src) h += `<div class="d-sec"><h3>依据</h3><ul class="d-src">${n.src.map(([t, u]) => `<li><a href="${u}" target="_blank" rel="noopener">${t}</a></li>`).join('')}</ul></div>`;
+  const rel = adj[n.id].filter(x => !(x.o === 'geo' && n.kind === 'hub'));
+  if (rel.length) {
+    const sorted = [...rel.filter(x => !x.out), ...rel.filter(x => x.out)];
+    h += `<div class="d-sec"><h3>关联节点</h3><div class="chips">` +
+      sorted.map(({o, e, out}) => `<button type="button" class="chip" data-go="${o}"><span class="chip-rel">${REL[e.type][out ? 0 : 1]}</span>${nodeById[o].label}</button>`).join('') +
+      `</div></div>`;
+  }
+  return h + '</div>';
+}
+function openDrawer(id) {
+  drawer.innerHTML = renderDrawer(nodeById[id]);
+  drawer.scrollTop = 0;
+  drawer.classList.add('open');
+  drawer.setAttribute('aria-hidden', 'false');
+  drawer.querySelector('[data-close]').onclick = () => closeDrawer(true);
+  drawer.querySelectorAll('[data-go]').forEach(b => b.onclick = () => select(b.dataset.go));
+}
+function closeDrawer(refit) {
+  if (!drawerOpen() && !state.selected) return;
+  drawer.classList.remove('open');
+  drawer.setAttribute('aria-hidden', 'true');
+  state.selected = null;
+  refreshLit();
+  if (refit && state.mode === 'explore' && sim.hidden) fitAll(700);
+}
+function focusIds(id) {
+  return [id, ...adj[id].filter(({o, e}) => curLayout[o].a !== 'hidden' && !(e.type === 'tree' && state.view === 'causal')).map(x => x.o)];
+}
+function select(id) {
+  if (state.mode === 'tour') exitTour(false);
+  hidePrimer();
+  state.selected = id;
+  refreshLit();
+  openDrawer(id);
+  requestAnimationFrame(() => flyCam(focusTarget(id), 750));
+}
+function focusTarget(id) {
+  if (state.layoutName !== 'tree') return fitTarget(bboxOf(focusIds(id), curLayout), {maxK:1.35});
+  // phone list: keep the list left-aligned and bring the node into the space above the sheet
+  const r = stage.getBoundingClientRect(), box = bboxOf(visibleIds(curLayout), curLayout);
+  const k = clamp((r.width - 40) / box.w, .5, 1.05), ins = insets();
+  const room = r.height - ins.b;
+  return {k, x:20 - box.x * k, y:Math.max(room * .55, 110) - pos[id].y * k};
+}
+
+/* ---------------- views & modes ---------------- */
+function updateSeg(seg, v) {
+  seg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
+  const b = seg.querySelector(`[data-v="${v}"]`), th = seg.querySelector('.thumb');
+  th.style.width = b.offsetWidth + 'px';
+  th.style.transform = `translateX(${b.offsetLeft}px)`;
+}
+function setView(v, {fit = true, force = false} = {}) {
+  if (v === state.view && !force) return Promise.resolve();
+  state.view = v;
+  updateSeg($('#viewSeg'), v);
+  const L = layoutFor(v);
+  applyVis();
+  const m = morphTo(L);
+  if (fit) fitAll(1050, L);
+  refreshLit();
+  return m;
+}
+function syncBodyCard() {
+  document.body.classList.toggle('has-card', !guide.hidden || !sim.hidden);
+}
+function showCard(c) {
+  c.hidden = false;
+  c.classList.remove('enter'); void c.offsetWidth; c.classList.add('enter');
+  syncBodyCard();
+}
+const modeNow = () => (state.mode === 'tour' || !primer.hidden) ? 'tour' : 'explore';
+function showPrimer() {
+  if (state.mode === 'tour') exitTour(false);
+  closeSim(false); closeDrawer(false);
+  primer.hidden = false;
+  primer.classList.remove('enter'); void primer.offsetWidth; primer.classList.add('enter');
+  primer.scrollTop = 0;
+  document.body.classList.add('has-primer');
+  updateSeg($('#modeSeg'), 'tour');
+}
+function hidePrimer() {
+  if (primer.hidden) return;
+  primer.hidden = true;
+  document.body.classList.remove('has-primer');
+  if (state.mode !== 'tour') updateSeg($('#modeSeg'), 'explore');
+}
+
+/* ---------------- particle & pulses ---------------- */
+let flowToken = 0;
+function pulse(id, bad) {
+  const p = pos[id];
+  const c = el('circle', {class:'pulse' + (bad ? ' bad' : ''), cx:p.x, cy:p.y, r:14}, fx);
+  setTimeout(() => c.remove(), 1000);
+}
+const setParticle = p => particle.setAttribute('transform', `translate(${p.x.toFixed(1)},${p.y.toFixed(1)})`);
+function stopFlow() { flowToken++; particle.classList.remove('on', 'fail', 'moving'); }
+async function runParticle(steps, {check, onStep, seg = 420, keep = false, skipFirst = false} = {}) {
+  const tok = ++flowToken;
+  particle.classList.remove('fail', 'moving');
+  setParticle(pos[steps[0]]);
+  particle.classList.add('on');
+  if (!skipFirst) { pulse(steps[0]); onStep && onStep(steps[0]); await sleep(260); }
+  for (let i = 1; i < steps.length; i++) {
+    const a = {...pos[steps[i - 1]]}, b = {...pos[steps[i]]};
+    particle.classList.add('moving');
+    await tween(seg, t => setParticle({x:lerp(a.x, b.x, t), y:lerp(a.y, b.y, t)}), easeInOut);
+    if (tok !== flowToken) return 'abort';
+    particle.classList.remove('moving');
+    pulse(steps[i]); onStep && onStep(steps[i]);
+    const fail = check && check(steps[i]);
+    if (fail) {
+      particle.classList.add('fail');
+      pulse(fail, true);
+      await tween(420, t => setParticle({x:b.x + Math.sin(t * Math.PI * 6) * 6 * (1 - t), y:b.y}), x => x);
+      await sleep(250);
+      if (tok !== flowToken) return 'abort';
+      particle.classList.remove('on');
+      return fail;
+    }
+    await sleep(150);
+    if (tok !== flowToken) return 'abort';
+  }
+  if (keep) return 'pass';
+  await sleep(500);
+  if (tok === flowToken) particle.classList.remove('on');
+  return 'pass';
+}
+const PIPE = ['e1','e2','e3','e4','e5','e6','e7','e8','e9'];
+
+/* ---------------- tour ---------------- */
+let tourToken = 0, tourReady = Promise.resolve();
+const PARTS = [['case', '案例'], ['method', '方法'], ['all', '全貌']];
+const gParts = $('#gParts');
+PARTS.forEach(([id, name]) => {
+  const g = document.createElement('div');
+  g.className = 'gp'; g.dataset.part = id;
+  g.innerHTML = `<span>${name}</span><div class="gp-bars"></div>`;
+  gParts.appendChild(g);
+});
+CH.forEach((c, i) => {
+  const b = document.createElement('button');
+  b.type = 'button'; b.setAttribute('aria-label', `第 ${i + 1} 步：${c.t}`);
+  b.onclick = () => renderChapter(i);
+  gParts.querySelector(`[data-part="${c.part}"] .gp-bars`).appendChild(b);
+  c.bar = b;
+});
+function startTour() {
+  hidePrimer(); closeSim(false); closeDrawer(false);
+  state.mode = 'tour'; state.hover = null; state.chapter = -1;
+  document.body.classList.add('mode-tour');
+  svg.classList.remove('dimming');
+  NODES.forEach(n => n.g.classList.remove('lit', 'focus'));
+  EDGES.forEach(e => e.el.classList.remove('lit'));
+  updateSeg($('#modeSeg'), 'tour');
+  document.querySelectorAll('#viewSeg button').forEach(b => b.disabled = true);
+  $('#simBtn').disabled = true;
+  showCard(guide);
+  tourReady = state.view !== 'causal' ? setView('causal', {fit:false}) : Promise.resolve();
+  renderChapter(0);
+}
+function clearTourMarks() {
+  NODES.forEach(n => n.g.classList.remove('tour-hidden', 'tour-past', 'tour-next', 'wobble', 'lit', 'focus'));
+  EDGES.forEach(e => e.el.classList.remove('tour-hidden', 'tour-dim', 'lit'));
+}
+function exitTour(toStruct) {
+  if (state.mode !== 'tour') return;
+  tourToken++; stopFlow();
+  state.mode = 'explore';
+  document.body.classList.remove('mode-tour');
+  clearTourMarks(); updateZones();
+  guide.hidden = true; syncBodyCard();
+  updateSeg($('#modeSeg'), 'explore');
+  document.querySelectorAll('#viewSeg button').forEach(b => b.disabled = false);
+  $('#simBtn').disabled = false;
+  if (toStruct) setView('struct'); else fitAll(800);
+}
+async function typeInto(node, text, tok) {
+  if (!node || RM) return;
+  node.textContent = '';
+  await sleep(450);
+  for (const ch of text) {
+    if (tok !== tourToken) return;
+    node.textContent += ch;
+    await sleep(22);
+  }
+}
+// the ring rests on the current step and travels along the pipeline as the reader advances
+function tourParticle(i, from) {
+  const id = CH[i].step;
+  if (!id) { stopFlow(); return; }
+  const prev = from >= 0 && from === i - 1 && CH[from].step;
+  if (prev) runParticle([prev, id], {seg:700, keep:true, skipFirst:true});
+  else { flowToken++; particle.classList.remove('fail', 'moving'); setParticle(pos[id]); particle.classList.add('on'); pulse(id); }
+}
+function renderChapter(i) {
+  const from = state.chapter, tok = ++tourToken;
+  state.chapter = i;
+  const ch = CH[i], last = !!ch.last;
+  const shown = new Set();
+  for (let j = 0; j <= i; j++) CH[j].add.forEach(x => shown.add(x));
+  if (last) NODES.forEach(n => { if (n.kind !== 'center') shown.add(n.id); });
+  const now = new Set(ch.add), keep = new Set(ch.hl || []);
+  NODES.forEach(n => {
+    const g = n.g;
+    g.classList.remove('tour-hidden', 'tour-past', 'tour-next', 'wobble');
+    g.classList.toggle('lit', n.id === ch.step);
+    g.classList.toggle('focus', n.id === ch.step);
+    if (!shown.has(n.id)) g.classList.add(n.kind === 'step' ? 'tour-next' : 'tour-hidden');
+    else if (!now.has(n.id) && !keep.has(n.id) && !last) g.classList.add('tour-past');
+  });
+  EDGES.forEach(e => {
+    const vis = shown.has(e.a) && shown.has(e.b);
+    const ghost = !vis && e.type === 'flow' && nodeById[e.a].kind === 'step' && nodeById[e.b].kind === 'step';
+    e.el.classList.toggle('tour-hidden', !vis && !ghost);
+    e.el.classList.toggle('tour-dim', ghost);
+    const cur = vis && !last && (now.has(e.a) || now.has(e.b)) && e.type !== 'tree';
+    e.el.classList.toggle('lit', cur && (VIS.causal.has(e.type) || e.type === 'memory' || (ch.act === 'loop' && e.type === 'loop')));
+  });
+  updateZones(shown);
+  // panel
+  const part = PARTS.findIndex(p => p[0] === ch.part), inPart = CH.filter(c => c.part === ch.part), k = inPart.indexOf(ch) + 1;
+  gParts.querySelectorAll('.gp').forEach((g, j) => g.classList.toggle('on', j === part));
+  CH.forEach((c, j) => { c.bar.classList.toggle('done', j < i); c.bar.classList.toggle('now', j === i); });
+  $('#gEyebrow').textContent = ch.part === 'case' ? `案例第 ${k} 步，共 ${inPart.length} 步` : ch.part === 'method' ? `方法 ${k} / ${inPart.length}` : '全貌';
+  $('#tcTitle').textContent = ch.t;
+  $('#tcBody').textContent = ch.b;
+  $('#gCase').innerHTML = ch.cx || '';
+  const content = $('#gContent');
+  content.style.animation = 'none'; void content.offsetWidth; content.style.animation = '';
+  $('#gScroll').scrollTop = 0;
+  $('#tcStep').textContent = `${i + 1} / ${CH.length}`;
+  $('#tcPrev').textContent = i === 0 ? '回到概念' : '上一步';
+  $('#tcNext').textContent = last ? '开始探索' : '下一步';
+  // camera
+  requestAnimationFrame(() => {
+    const ids = ch.focus === 'all' ? [...shown] : ch.focus;
+    flyCam(fitTarget(bboxOf(ids, CAUSAL), {maxK:1.3}), 900);
+  });
+  tourReady.then(() => { if (tok === tourToken) tourParticle(i, from); });
+  if (ch.act === 'type') typeInto($('#gCase [data-type]'), Q, tok);
+  if (ch.act === 'risk') setTimeout(() => {
+    if (tok !== tourToken) return;
+    ['g1','g2','e9'].forEach((id, k) => setTimeout(() => { if (tok === tourToken) { nodeById[id].g.classList.add('wobble'); pulse(id, true); } }, k * 160));
+  }, RM ? 0 : 1100);
+}
+$('#tcNext').onclick = () => { if (CH[state.chapter].last) exitTour(true); else renderChapter(state.chapter + 1); };
+$('#tcPrev').onclick = () => { if (state.chapter > 0) renderChapter(state.chapter - 1); else { exitTour(false); showPrimer(); } };
+$('#tcClose').onclick = () => exitTour(false);
+
+/* ---------------- simulator ---------------- */
+const GATE_LEVERS = {g1:['l5','l4'], g2:['l1','l2'], g3:['l3','l1']};
+const STEP_GATE = {e5:'g1', e6:'g2', e7:'g3'};
+const FAIL_TEXT = {
+  g1:'AI 搜索时没有检索到你的网页和商家资料，品牌在第 05 步「检索网页」就出局了。',
+  g2:'AI 检索到了你的页面，却提取不出人均价格、桌型这些关键信息，没法匹配「6 人、50 美元」的条件。',
+  g3:'AI 读懂了你的信息，但只有你自己在说，缺少第三方印证，最终选了被多方推荐的竞品。'
+};
+const swOn = g => $('#sw-' + g).checked;
+function renderAnswer(kind) {
+  const a = $('#answer');
+  const status = {idle:['等待播放',''], run:['AI 正在处理…',''], pass:['品牌进入推荐','ok']};
+  let st = status[kind] || ['品牌未出现','bad'];
+  let body = '';
+  if (kind === 'idle') body = '<p class="ans-idle">点击「播放」，看这个问题流过 AI 的 9 个步骤后，你的品牌能不能出现在回答里。</p>';
+  else if (kind === 'run') body = '<p class="ans-idle">光点正在流过 AI 的处理流程……</p>';
+  else if (kind === 'pass') body = `<ol class="ans-list">
+      <li><b>Restaurant A</b> (East Village): private room for groups, about $55 per person.</li>
+      <li class="you"><b>你的品牌</b> (Midtown): tables for up to 8, about $45 per person, known for its beef-tallow mala broth.<span class="ans-src">来源：Yelp、Eater NY、Reddit</span></li>
+      <li><b>Restaurant B</b> (Chinatown): best value at about $42 per person, open late.</li>
+    </ol><p class="ans-note">三道门槛全部通过，品牌被写进回答，排在第 2 位。</p>`;
+  else body = `<ol class="ans-list">
+      <li><b>Restaurant A</b> (East Village): private room for groups, about $55 per person.</li>
+      <li><b>Restaurant B</b> (Chinatown): best value at about $42 per person, open late.</li>
+      <li><b>Restaurant C</b> (K-Town): roomy tables for groups, slightly over budget at about $60 per person.</li>
+    </ol><p class="ans-note bad">在「${nodeById[kind].label}」这一关被淘汰：${FAIL_TEXT[kind]}</p>`;
+  a.innerHTML = `<div class="ans-head"><span class="ans-app">CHATGPT · 示例回答</span><span class="ans-status ${st[1]}">${st[0]}</span></div>
+    <div class="ans-q">${Q}</div>${body}<p class="ans-foot">示例回答，店名和数字为虚构，仅用于演示机制。</p>`;
+  if (!sim.hidden && Math.abs(sim.offsetHeight - simH) > 4) { simH = sim.offsetHeight; fitSim(500); }
+}
+let simH = 0;
+const fitSim = dur => flyCam(fitTarget(bboxOf(SIM_FOCUS, CAUSAL), {maxK:1.2}), dur);
+function applySimMarks() {
+  const off = new Set(['g1','g2','g3'].filter(g => !swOn(g)));
+  ['g1','g2','g3'].forEach(g => nodeById[g].g.classList.toggle('off', off.has(g)));
+  const weak = new Set(); off.forEach(g => GATE_LEVERS[g].forEach(l => weak.add(l)));
+  ['l1','l2','l3','l4','l5'].forEach(l => nodeById[l].g.classList.toggle('weak', weak.has(l)));
+  EDGES.forEach(e => e.el.classList.toggle('off-edge', e.type === 'merge' && off.has(e.b)));
+}
+function clearSimMarks() {
+  NODES.forEach(n => n.g.classList.remove('off', 'weak'));
+  EDGES.forEach(e => e.el.classList.remove('off-edge'));
+}
+const SIM_FOCUS = ['e1','e2','e3','e4','e5','e6','e7','e8','e9','e10','g1','g2','g3','l1','l2','l3','l4','l5','l6'];
+function openSim() {
+  if (state.mode === 'tour') exitTour(false);
+  hidePrimer(); closeDrawer(false);
+  showCard(sim);
+  $('#simBtn').setAttribute('aria-pressed', 'true');
+  renderAnswer('idle'); applySimMarks();
+  simH = sim.offsetHeight;
+  if (state.view !== 'causal') setView('causal', {fit:false});
+  requestAnimationFrame(() => fitSim(900));
+}
+function closeSim(refit = true) {
+  if (sim.hidden) return;
+  stopFlow();
+  sim.hidden = true; syncBodyCard();
+  $('#simBtn').setAttribute('aria-pressed', 'false');
+  clearSimMarks();
+  if (refit) fitAll(800);
+}
+['g1','g2','g3'].forEach(g => $('#sw-' + g).addEventListener('change', () => { stopFlow(); applySimMarks(); renderAnswer('idle'); }));
+$('#simPlay').onclick = async () => {
+  renderAnswer('run');
+  const r = await runParticle(PIPE, {check:id => (STEP_GATE[id] && !swOn(STEP_GATE[id])) ? STEP_GATE[id] : null});
+  if (r === 'abort') return;
+  renderAnswer(r);
+};
+$('#simClose').onclick = () => closeSim(true);
+$('#simBtn').onclick = () => sim.hidden ? openSim() : closeSim(true);
+
+/* ---------------- search ---------------- */
+const qi = $('#q'), results = $('#results');
+let hits = [], hi = 0;
+function renderResults() {
+  if (!hits.length) { results.innerHTML = '<div class="empty">没有找到匹配的节点</div>'; return; }
+  results.innerHTML = hits.map((n, i) => `<button type="button" data-go="${n.id}" class="${i === hi ? 'on' : ''}"><span>${n.label}</span><span>${n.kind === 'center' ? '' : DIMS[n.dim].name}</span></button>`).join('');
+  results.querySelectorAll('button').forEach(b => b.onmousedown = e => { e.preventDefault(); pick(b.dataset.go); });
+}
+function pick(id) { results.hidden = true; qi.value = ''; qi.blur(); select(id); }
+qi.addEventListener('input', () => {
+  const s = qi.value.trim().toLowerCase();
+  if (!s) { results.hidden = true; return; }
+  hits = NODES.filter(n => (n.label + ' ' + n.en + ' ' + n.def).toLowerCase().includes(s)).slice(0, 8);
+  hi = 0; renderResults(); results.hidden = false;
+});
+qi.addEventListener('keydown', e => {
+  if (results.hidden || !hits.length) return;
+  if (e.key === 'ArrowDown') { e.preventDefault(); hi = (hi + 1) % hits.length; renderResults(); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); hi = (hi - 1 + hits.length) % hits.length; renderResults(); }
+  else if (e.key === 'Enter') { e.preventDefault(); pick(hits[hi].id); }
+});
+qi.addEventListener('blur', () => setTimeout(() => results.hidden = true, 120));
+
+/* ---------------- legend ---------------- */
+(function buildLegend() {
+  const body = $('#lgBody');
+  let h = '<div class="lg-title">证据等级 · 点击筛选</div>';
+  ['A','O','I','F'].forEach(k => h += `<button type="button" class="lg-row" data-ev="${k}">${glyphSvg(k)}<span>${EV[k].name}</span></button>`);
+  h += '<div class="lg-title">连线</div>';
+  const line = (d, dash, txt) => `<div class="lg-row"><svg width="26" height="12" viewBox="0 0 26 12" aria-hidden="true"><path d="${d}" fill="none" stroke="var(--fg-2)" stroke-width="1.3" ${dash ? 'stroke-dasharray="3 3"' : ''} stroke-linecap="round"/></svg><span>${txt}</span></div>`;
+  h += line('M1 6 H22 M18 2.5 L22 6 L18 9.5', false, '导致 / 流向');
+  h += line('M1 1.5 Q12 1.5 16 6 M1 10.5 Q12 10.5 16 6 H24', false, '共同决定（A + B → C）');
+  h += line('M1 6 H22', true, '衡量、反馈或削弱');
+  h += `<div class="lg-row"><svg width="26" height="12" viewBox="-13 -6 26 12" aria-hidden="true"><rect x="-6" y="-6" width="12" height="12" rx="3" fill="none" stroke="var(--accent)" stroke-width="1.2"/></svg><span>门槛</span></div>`;
+  body.innerHTML = h;
+  body.querySelectorAll('[data-ev]').forEach(b => b.onclick = () => {
+    state.filter = state.filter === b.dataset.ev ? null : b.dataset.ev;
+    applyFilter();
+  });
+  const t = $('#lgToggle');
+  t.onclick = () => { const open = t.getAttribute('aria-expanded') !== 'true'; t.setAttribute('aria-expanded', String(open)); body.hidden = !open; };
+})();
+
+/* ---------------- top bar & keys ---------------- */
+$('#modeSeg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.v === 'tour') { if (state.mode !== 'tour') showPrimer(); }
+  else { hidePrimer(); exitTour(false); }
+});
+$('#viewSeg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || b.disabled) return;
+  hidePrimer();
+  setView(b.dataset.v);
+});
+$('#inStart').onclick = startTour;
+$('#inSkip').onclick = () => { hidePrimer(); if (state.view !== 'struct') setView('struct'); else fitAll(700); };
+document.addEventListener('keydown', e => {
+  const typing = /INPUT|TEXTAREA/.test(document.activeElement.tagName);
+  if (e.key === 'Escape') {
+    if (!results.hidden) { results.hidden = true; return; }
+    if (typing) { qi.blur(); return; }
+    if (!primer.hidden) { hidePrimer(); return; }
+    if (state.mode === 'tour') { exitTour(false); return; }
+    if (drawerOpen()) { closeDrawer(true); return; }
+    if (!sim.hidden) { closeSim(true); return; }
+    return;
+  }
+  if (typing) return;
+  if (state.mode === 'tour') {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); $('#tcNext').click(); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); $('#tcPrev').click(); }
+  } else if (e.key === '/') { e.preventDefault(); qi.focus(); }
+});
+
+let rsT;
+window.addEventListener('resize', () => {
+  clearTimeout(rsT);
+  rsT = setTimeout(() => {
+    updateSeg($('#modeSeg'), modeNow()); updateSeg($('#viewSeg'), state.view);
+    if (state.view === 'struct') {
+      const before = state.layoutName, L = layoutFor('struct');
+      if (state.layoutName !== before) { morphTo(L, 600); fitAll(700, L); return; }
+    }
+    if (state.mode === 'tour') renderChapter(state.chapter);
+    else if (!sim.hidden) fitSim(500);
+    else if (state.selected) flyCam(focusTarget(state.selected), 500);
+    else fitAll(500);
+  }, 160);
+});
+
+/* ---------------- init ---------------- */
+function init(first) {
+  measure();
+  const L = layoutFor(state.view);
+  applyLayoutNow(L);
+  applyVis();
+  if (first) {
+    if (camAnim) camAnim.cancel();
+    const r = stage.getBoundingClientRect();
+    if (state.layoutName === 'tree') { fitAll(0, L); }
+    else Object.assign(cam, fitTarget(bboxOf(visibleIds(L), L), {maxK:1.2}));
+    applyCam();
+  }
+}
+document.body.classList.add('has-primer');
+updateSeg($('#modeSeg'), 'tour'); updateSeg($('#viewSeg'), 'struct');
+syncBodyCard();
+NODES.forEach(n => {
+  const L = layoutStruct()[n.id];
+  const d = Math.hypot(L.x - 800, L.y - 500);
+  n.inner.style.setProperty('--d', Math.round(d / 520 * 420) + 'ms');
+});
+init(true);
+if (!RM) { svg.classList.add('intro'); setTimeout(() => svg.classList.remove('intro'), 1600); }
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => {
+  init(false);
+  updateSeg($('#modeSeg'), modeNow()); updateSeg($('#viewSeg'), state.view);
+  if (state.mode === 'explore' && !state.selected && sim.hidden) fitAll(400);
+});
+})();
+</script>
+
+</html>
